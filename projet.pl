@@ -7,6 +7,7 @@ use DBI;
 my $file = "Hotels1.csv";
 
 
+
 sub initialisation{
 my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});
 
@@ -111,11 +112,70 @@ $dbh -> disconnect();
 } #Fin de la fonction initialisation
 
 
+#Fonction qui permet l'affichage des gerants de l'hotel.
+
+# ===================INTEGRATION===================
+
+
+sub afficher_gerant{
+my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});
+my $requete = "SELECT gerant,hotel  FROM tablehotel";
+my $prep = $dbh->prepare($requete);
+$prep->execute;
+    #or die 'Impossible d\'exécuter la requête : '.$prep->errstr;
+while (my($gerant,$hotel) = $prep->fetchrow_array ) {
+
+      print "$hotel -> $gerant\n";
+    #  print "Le gerant de l'hotel $hotel est monsieur $gerant\n";
+    }
+}
+
+# ===================MISE A JOUR===================
+
+sub ajouter_chambre{
+    my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});
+    print "Pour quel hotel voulez vous ajouter une chambre ? \n";
+    my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
+    my $prep = $dbh->prepare($requete);
+    $prep->execute;
+    while (my($hotel) = $prep->fetchrow_array ) {
+          print "$hotel \n";
+    }
+    my $rep_hotel = <>;
+    print "Quel est le numéro de la chambre ?";
+    my $rep_numChambre = <>;
+    print "Quel est le type de couchage ? (Simple/Double) \n";
+    my $rep_couchage = <>;
+    print "Quel est le prix basse saison ?  \n";
+    my $rep_basseSaison = <>;
+    print "Quel est le haute basse saison ?  \n";
+    my $rep_hauteSaison = <>;
+# ================================
+    my $insert_chambre = $dbh->prepare("INSERT INTO Chambre VALUES(?,?,?,?,?)");
+    $insert_chambre->execute($rep_numChambre,$rep_hotel,$rep_couchage,$rep_basseSaison,$rep_hauteSaison);
+
+}
+
+sub modifier_gerant{
+
+# UPDATE hotel
+# SET gerant = "?"
+# WHERE gerant
+
+UPDATE tablehotel
+SET gerant = 'Martial'
+WHERE gerant= 'dupont'
+
+
+}
+
+
 # ===================MENU===================
 
 sub menu{
     print "=========================MENU========================= \n";
-    print "[1] Afficher la Table d'initialisation \n";
+    print "[1] Afficher \n";
+    print " 2 inserer chambre"
 }
 
 
@@ -125,7 +185,10 @@ while ($boucle == 1){
     menu;
     my $rep = <>;
     if ($rep == 1){
-        print "FILS DE PUTE \n";
+        afficher_gerant();
+    }
+    if ($rep == 2){
+        ajouter_chambre();
     }
 }
 
