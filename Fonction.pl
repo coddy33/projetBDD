@@ -6,16 +6,18 @@ use DBI;
 
 my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});
 
-my $requete = "SELECT gerant  FROM tablehotel";
+my $requete = "SELECT gerant,hotel  FROM tablehotel";
 my $prep = $dbh->prepare($requete);
     #or die "Impossible de préparer la requête : ".$dbh->errstr;
 
 $prep->execute;
 
     #or die 'Impossible d\'exécuter la requête : '.$prep->errstr;
-while (my($gerant,$hotel,$etoiles) = $prep->fetchrow_array ) {
+while (my($gerant,$hotel) = $prep->fetchrow_array ) {
 
-      print "$gerant, $hotel, $etoiles\n";
+      print "$hotel -> $gerant\n";
+    #  print "Le gerant de l'hotel $hotel est monsieur $gerant\n";
+
 
 
 
