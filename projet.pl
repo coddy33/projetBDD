@@ -112,8 +112,6 @@ $dbh -> disconnect();
 } #Fin de la fonction initialisation
 
 
-#Fonction qui permet l'affichage des gerants de l'hotel.
-
 # ===================INTEGRATION===================
 
 
@@ -158,13 +156,9 @@ sub ajouter_chambre{
 
 sub modifier_gerant{
 
-# UPDATE hotel
-# SET gerant = "?"
-# WHERE gerant
-
-UPDATE tablehotel
-SET gerant = 'Martial'
-WHERE gerant= 'dupont'
+# UPDATE tablehotel
+# SET gerant = 'Martial'
+# WHERE gerant= 'dupont'
 
 
 }
@@ -174,10 +168,34 @@ WHERE gerant= 'dupont'
 
 sub menu{
     print "=========================MENU========================= \n";
-    print "[1] Afficher \n";
-    print " 2 inserer chambre"
+    print "\t [1] Interrogation \n";
+    print "\t [2] Mise à jour \n";
+    print "\t [2] Statistiques \n" 
 }
 
+
+sub menu_interrogation{
+    print "=========================MENU========================= \n";
+    print "\t [1] Afficher les nom des gérants \n";
+    print "\t [2] Afficher le nombre des gérants \n";
+    print "\t [3] Afficher les personnes qui gèrent au moins deux hôtels \n";
+    print "\t [4] Afficher les hôtels où il y a au moins une chambre de libre \n";    
+}
+
+sub menu_maj{
+    print "=========================MENU========================= \n";
+    print "\t [1] Ajouter une chambre à un hôtel\n";    
+    print "\t [2] Modifier le nom du gérant d'un hôtel\n";    
+    print "\t [3] Annuler une réservation\n";    
+    print "\t [4] Ajouter une réservation\n";        
+}
+
+sub menu_stats{
+    print "=========================MENU========================= \n";
+    print "\t [1] Afficher le taux d'occupation d'un hôtel (7 derniers jours)\n";    
+    print "\t [1] Afficher le taux d'occupation de tous les hôtels (7 derniers jours)\n";    
+    print "\t [1] Afficher les ou les hôtels qui ont le plus grand taux d'occupation (7 derniers jours)\n";        
+}
 
 my $boucle = 1; 
 initialisation();
