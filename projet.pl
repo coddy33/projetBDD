@@ -33,12 +33,12 @@ sub initialisation{
         PhoneClient text);
 
         create table TableHotel(
-        Hotel text,
+        Hotel text PRIMARY KEY,
         Gerant text,
         Etoiles integer);
 
         CREATE TABLE Reservation(
-        NumResa integer,
+        NumResa integer PRIMARY KEY,
         DebutResa text,
         FinResa text,
         NumChambre integer,
@@ -47,7 +47,7 @@ sub initialisation{
 
 
         CREATE TABLE Client(
-        NomClient text,
+        NomClient text PRIMARY KEY,
         PhoneClient text);
 
 
@@ -56,7 +56,8 @@ sub initialisation{
         Hotel text,
         Typecouchage text,
         PrixBasseSaison integer,
-        PrixHauteSaison integer);
+        PrixHauteSaison integer,
+        PRIMARY KEY(NumChambre,Hotel));
         ");
 
 
@@ -79,25 +80,29 @@ sub initialisation{
 
         insert into TableHotel(
         select hotel, gerant, etoiles
-        From inittable );
+        From inittable
+        GROUP BY hotel,gerant,etoiles );
         ");
 
         my $initResa = $dbh->prepare("
         INSERT INTO Reservation(
         SELECT NumResa, DebutResa, FinResa, NumChambre, Hotel, NomClient
-        FROM InitTable);
+        FROM InitTable
+        GROUP BY NumResa, DebutResa, FinResa, NumChambre, Hotel, NomClient );
         ");
 
         my $initClient = $dbh->prepare("
         INSERT INTO Client(
         SELECT NomClient, PhoneClient
-        FROM InitTable);
+        FROM InitTable
+        GROUP BY NomClient,PhoneClient);
         ");
 
         my $initChambre = $dbh->prepare("
         INSERT INTO Chambre(
         SELECT NumChambre, Hotel, TypeCouchage, PrixBasseSaison, PrixHauteSaison
-        FROM InitTable);
+        FROM InitTable
+        GROUP BY NumChambre, Hotel, TypeCouchage, PrixBasseSaison, PrixHauteSaison);
         ");
 
         $initHotel->execute();
