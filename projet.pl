@@ -3,13 +3,14 @@
 use strict;
 use warnings;
 use DBI;
+use DateTime;
 
 my $file = "Hotels1.csv";
 
 
 
 sub initialisation{
-my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});
+my $dbh = DBI -> connect("DBI:Pg:dbname=sgoncal1;host=dbserver","sgoncal1","ANST4-case4",{'RaiseError' => 1});
 
 $dbh -> do ("drop table if exists initTable cascade");
 $dbh -> do ("drop table if exists TableHotel cascade");
@@ -34,12 +35,12 @@ NomClient text,
 PhoneClient text);
 
 create table TableHotel(
-Hotel text,
+Hotel text PRIMARY KEY,
 Gerant text,
 Etoiles integer);
 
 CREATE TABLE Reservation(
-NumResa integer,
+NumResa integer PRIMARY KEY,
 DebutResa text,
 FinResa text,
 NumChambre integer,
@@ -48,7 +49,7 @@ NomClient text);
 
 
 CREATE TABLE Client(
-NomClient text,
+NomClient text PRIMARY KEY,
 PhoneClient text);
 
 
@@ -57,7 +58,8 @@ NumChambre text,
 Hotel text,
 Typecouchage text,
 PrixBasseSaison integer,
-PrixHauteSaison integer);
+PrixHauteSaison integer,
+PRIMARY KEY(NumChambre,Hotel));
 ");
 
 
@@ -80,25 +82,29 @@ my $initHotel = $dbh->prepare("
 
 insert into TableHotel(
 select hotel, gerant, etoiles
-From inittable );
+From inittable
+GROUP BY hotel,gerant,etoiles );
 ");
 
 my $initResa = $dbh->prepare("
 INSERT INTO Reservation(
 SELECT NumResa, DebutResa, FinResa, NumChambre, Hotel, NomClient
-FROM InitTable);
+FROM InitTable
+GROUP BY NumResa, DebutResa, FinResa, NumChambre, Hotel, NomClient );
 ");
 
 my $initClient = $dbh->prepare("
 INSERT INTO Client(
 SELECT NomClient, PhoneClient
-FROM InitTable);
+FROM InitTable
+GROUP BY NomClient,PhoneClient);
 ");
 
 my $initChambre = $dbh->prepare("
 INSERT INTO Chambre(
 SELECT NumChambre, Hotel, TypeCouchage, PrixBasseSaison, PrixHauteSaison
-FROM InitTable);
+FROM InitTable
+GROUP BY NumChambre, Hotel, TypeCouchage, PrixBasseSaison, PrixHauteSaison);
 ");
 
 $initHotel->execute();
@@ -154,7 +160,8 @@ sub ajouter_chambre{
 
 }
 
-sub modifier_gerant{
+sub modifier_gerant {
+
 
 # UPDATE tablehotel
 # SET gerant = 'Martial'
@@ -163,6 +170,7 @@ sub modifier_gerant{
 
 }
 
+# ===================STATISTIQUES===================
 
 # ===================MENU===================
 
