@@ -201,16 +201,15 @@ while (my($lineCount) = $prep1->fetchrow_array ) {
         #or die 'Impossible d\'exécuter la requête : '.$prep->errstr;
     while (my($dateCount) = $prep2->fetchrow_array ) {
         my $taux = ($dateCount / $lineCount)*100;
-        print "$h -> $taux%\n";
-        #  print "Le gerant de l'hotel $hotel est monsieur $gerant\n";
         }
     }
+    return $taux;
 }
 
 
 # ===================MENU===================
 
-sub menu{
+sub menu {
     print "=========================MENU========================= \n";
     print "\t [1] Interrogation \n";
     print "\t [2] Mise à jour \n";
@@ -219,14 +218,14 @@ sub menu{
 }
 
 
-sub menu_interrogation{
+sub menu_interrogation {
     print "=========================MENU========================= \n";
     print "\t [1] Afficher les nom des gérants \n";
     print "\t [2] Afficher le nombre des gérants \n";
     print "\t [3] Afficher les personnes qui gèrent au moins deux hôtels \n";
     print "\t [4] Afficher les hôtels où il y a au moins une chambre de libre \n";    
 }
-sub interrogation{
+sub interrogation {
     my $rep = <>;
     if ($rep == 1){
         print "Les gérants se nomment : \n";        
@@ -283,7 +282,31 @@ while ($boucle == 1){
     }
     if ($rep == 3){
         menu_stats();
-    }
+        my $option = <>;
+        if ($option == 1) {
+            print "Quel hôtel voulez-vous consulter ?\n"
+            my $h = <>;
+            my $taux = taux_occupation($h);
+            print "$h -> $taux%\n";
+        }else if($option == 2 or $option == 3) {
+            my @list = ("Bordeaux","Bruges","Talence","Cauderan","Pessac");
+            my $max = -1;
+            my $hotel;
+            for my $x(@list){
+                my $taux = taux_occupation($x);
+                if($option == 2) {
+                    print "$x -> $taux%\n";
+                }else{
+                    if ($taux > $max) {
+                        $max = $taux;
+                        $hotel = $x;
+                    }  
+                }
+            }
+            if ($option == 3) {
+                print "Meilleurs taux d'occupation : $hotel -> $max%\n";
+            }
+        }
     if ($rep == 0){
         $dbh -> disconnect();        
         exit;
