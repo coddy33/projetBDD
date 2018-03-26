@@ -191,7 +191,7 @@ my $today = DateTime->new ( day => 22,
 my $weekEarly = $today->clone->subtract( weeks => 1);
 
 # Main 
-my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Total number of chambers 
+my $requete1 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h'); # Total number of chambers 
 my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND to_date(debutresa,'DD/MM/YYYY') <='$today' AND to_date(finresa,'DD/MM/YYYY') >= '$weekEarly');
 my $prep1 = $dbh->prepare($requete1);
 my $prep2 = $dbh->prepare($requete2);
