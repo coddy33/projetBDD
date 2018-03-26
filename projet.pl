@@ -3,10 +3,11 @@
 use strict;
 use warnings;
 use DBI;
+use DateTime;
 
 my $file = "Hotels1.csv";
 
-my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});
+my $dbh = DBI -> connect("DBI:Pg:dbname=sgoncal1;host=dbserver","sgoncal1","ANST4-CASE4",{'RaiseError' => 1});
 
 sub initialisation{
         
@@ -183,24 +184,28 @@ sub modifier_gerant{
 sub taux_occupation {
 # Date : today and earlier week
 my($h) = @_;
-my $today = DateTime->new ( day => 26,
+my $today = DateTime->new ( day => 22,
                             month =>02,
                             year =>2018
                             );
 my $weekEarly = $today->clone->subtract( weeks => 1);
 
 # Main 
-my $requete1 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h'); # Total number of chambers 
+my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Total number of chambers 
 my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND to_date(debutresa,'DD/MM/YYYY') <='$today' AND to_date(finresa,'DD/MM/YYYY') >= '$weekEarly');
 my $prep1 = $dbh->prepare($requete1);
 my $prep2 = $dbh->prepare($requete2);
 $prep1->execute;
     #or die 'Impossible d\'exécuter la requête : '.$prep->errstr;
-while (my($lineCount) = $prep1->fetchrow_array ) {
+my $taux;
+while (my($lineCount) = $prep1->fetchrow_array) {
     $prep2->execute;
+    if($lineCount == 0) {
+        return 0;
+    }
         #or die 'Impossible d\'exécuter la requête : '.$prep->errstr;
     while (my($dateCount) = $prep2->fetchrow_array ) {
-        my $taux = ($dateCount / $lineCount)*100;
+        $taux = ($dateCount / $lineCount)*100;
         }
     }
     return $taux;
@@ -244,7 +249,7 @@ sub interrogation {
 }
 
 
-SELECT hotel FROM  GROUP BY NomImmeuble HAVING   COUNT(*) > 3
+# SELECT hotel FROM  GROUP BY NomImmeuble HAVING   COUNT(*) > 3
 
 
 sub menu_maj{
@@ -255,8 +260,8 @@ sub menu_maj{
     print "\t [4] Ajouter une réservation\n";        
 }
 sub maj{
-    my $rep = <>;
-    if ($rep == 1){
+    my $answer = <>;
+    if ($answer == 1){
         ajouter_chambre();
     }
 }
@@ -282,37 +287,35 @@ while ($boucle == 1){
     }
     if ($rep == 3){
         menu_stats();
+        my $taux;
         my $option = <>;
+        my $h;
         if ($option == 1) {
-            print "Quel hôtel voulez-vous consulter ?\n"
-            my $h = <>;
-            my $taux = taux_occupation($h);
-            print "$h -> $taux%\n";
-        }else if($option == 2 or $option == 3) {
+            print "Quel hôtel voulez-vous consulter ?\n";
+            $h = <>;
+            $taux = taux_occupation($h);
+            print "$h -> $taux% \n";
+        }if($option == 2 or $option == 3) {
             my @list = ("Bordeaux","Bruges","Talence","Cauderan","Pessac");
             my $max = -1;
-            my $hotel;
-            for my $x(@list){
-                my $taux = taux_occupation($x);
+                        for my $x(@list){
+                $taux = taux_occupation($x);
                 if($option == 2) {
-                    print "$x -> $taux%\n";
+                    print "$x -> $taux% \n";
                 }else{
                     if ($taux > $max) {
                         $max = $taux;
-                        $hotel = $x;
+                        $h = $x;
                     }  
                 }
             }
             if ($option == 3) {
-                print "Meilleurs taux d'occupation : $hotel -> $max%\n";
+                print "Meilleurs taux d'occupation : $h -> $max%\n";
             }
         }
+    }
     if ($rep == 0){
         $dbh -> disconnect();        
         exit;
     }
 }
-
-
-
-
