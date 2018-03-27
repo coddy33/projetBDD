@@ -7,7 +7,7 @@ use DateTime;
 
 my $file = "Hotels1.csv";
 
-my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});
+my $dbh = DBI -> connect("DBI:Pg:dbname=mbodet911e;host=dbserver","mbodet911e","idiot21",{'RaiseError' => 1});
 
 sub initialisation{
 
@@ -28,8 +28,8 @@ sub initialisation{
         PrixBasseSaison integer,
         PrixHauteSaison integer,
         NumResa integer,
-        DebutResa text,
-        FinResa text,
+        DebutResa date,
+        FinResa date,
         NomClient text,
         PhoneClient text);
 
@@ -40,8 +40,8 @@ sub initialisation{
 
         CREATE TABLE Reservation(
         NumResa integer PRIMARY KEY,
-        DebutResa text,
-        FinResa text,
+        DebutResa date,
+        FinResa date,
         NumChambre integer,
         Hotel text,
         NomClient text);
@@ -243,8 +243,14 @@ sub interrogation {
         print "Les gérants qui gérent au moins deux hotels sont : \n";
         test("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
     }if ($rep == 4){
+        chomp(my $dated=<>);
+        my @convdate=split("-",$dated);
+        my $newDate = DateTime->new ( day => $convdate[0],
+                                    month => $convdate[1],
+                                    year => $convdate[2]
+                                    );
         print "Les hotels qui ont au moins une chambre de libre sont : \n";
-        test("*");
+        test("SELECT hotel FROM reservation WHERE debutresa > '$newDate'");
     }
 }
 
