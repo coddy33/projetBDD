@@ -1,16 +1,17 @@
 #!/bin/env perl
 
-use strict;
+#use strict;
 use warnings;
 use DBI;
 use DateTime;
+use POSIX qw(strftime);
 
 my $file = "Hotels1.csv";
 
-my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});
+my $dbh = DBI -> connect("DBI:Pg:dbname=mbodet911e;host=dbserver","mbodet911e","idiot21",{'RaiseError' => 1});
 
 sub initialisation{
-        
+
         $dbh -> do ("drop table if exists initTable cascade");
         $dbh -> do ("drop table if exists TableHotel cascade");
         $dbh -> do ("drop table if exists Reservation cascade");
@@ -71,7 +72,7 @@ sub initialisation{
         while (<HOTEL>){
             if ($x != 1){
             chomp($_);
-            my @fields = split(',',$_);   
+            my @fields = split(',',$_);
             $remplissage -> execute($fields[0],$fields[1],int($fields[2]),int($fields[3]),$fields[4],int($fields[5]),int($fields[6]),int($fields[7]),$fields[8],$fields[9],$fields[10],$fields[11]);
         }
             $x = $x -1;
@@ -124,7 +125,7 @@ sub initialisation{
 #     $prep->execute;
 #         #or die 'Impossible d\'eécuter la requête : '.$prep->errstr;
 #     # return $prep;
-#     my @col1, my @col2, my @col3; 
+#     my @col1, my @col2, my @col3;
 #     while (my($cell1, $cell2) = @_->fetchrow_array ) {
 #     push(@col1,$cell1);
 #     push(@col2,$cell2);
@@ -183,7 +184,7 @@ sub modifier_gerant{
 # ================== STATISTIQUES ===========
 sub dateCacl {
 my($date) = @_;
-my @convDate = split("/",$date);  
+my @convDate = split("/",$date);
 my $today = DateTime->new ( day => $convDate[0],
                             month =>$convDate[1],
                             year =>$convDate[2]
@@ -196,8 +197,8 @@ sub hotel_taux {
 # Date : today and earlier week
 my($today,$weekEarly,$h) = @_;
 
-# Main 
-my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Total number of chambers 
+# Main
+my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Total number of chambers
 my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND to_date(debutresa,'DD/MM/YYYY') <='$today' AND to_date(finresa,'DD/MM/YYYY') >= '$weekEarly' GROUP BY numchambre);
 my $prep1 = $dbh->prepare($requete1);
 my $prep2 = $dbh->prepare($requete2);
@@ -211,7 +212,7 @@ while (my($lineCount) = $prep1->fetchrow_array) {
     }
         #or die 'Impossible d\'exécuter la requête : '.$prep->errstr;
     while (my($dateCount) = $prep2->fetchrow_array ) {
-        
+
         $taux = ($dateCount / $lineCount)*100;
         }
     }
@@ -258,12 +259,12 @@ sub menu_interrogation {
     print "\t [1] Afficher les nom des gérants \n";
     print "\t [2] Afficher le nombre des gérants \n";
     print "\t [3] Afficher les personnes qui gèrent au moins deux hôtels \n";
-    print "\t [4] Afficher les hôtels où il y a au moins une chambre de libre \n";    
+    print "\t [4] Afficher les hôtels où il y a au moins une chambre de libre \n";
 }
 sub interrogation {
     my $rep = <>;
     if ($rep == 1){
-        print "Les gérants se nomment : \n";        
+        print "Les gérants se nomment : \n";
         test("SELECT gerant,hotel  FROM tablehotel");
     }
     if ($rep == 2){
@@ -273,8 +274,26 @@ sub interrogation {
         print "Les gérants qui gérent au moins deux hotels sont : \n";
         test("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
     }if ($rep == 4){
+        chomp(my $dated=<>);
+        my @convdated=split("/",$dated);
+        my $newDated = DateTime->new ( day => $convdated[0],
+                                  month => $convdated[1],
+                                  year => $convdated[2]
+                                  );
+        #strftime("%d/%m/%y",newDated);
+        chomp(my $datef=<>);
+        my @convdatef=split("/",$datef);
+        my $newDatef = DateTime->new ( day => $convdatef[0],
+                                      month => $convdatef[1],
+                                      year => $convdatef[2]
+                                      );
+        #strftime("%d/%m/%y",newDatef);
+
+        $newDated=$newDated->dmy('/');
+        $newDatef=$newDatef->dmy('/');
         print "Les hotels qui ont au moins une chambre de libre sont : \n";
-        test("*");
+        # test("SELECT * FROM reservation WHERE '$newDated'  NOT BETWEEN debutresa AND finresa AND '$newDatef' NOT BETWEEN debutresa AND finresa ");# OR numresa<0  ");
+        test("SELECT hotel FROM reservation WHERE ('$newDated' < debutresa AND '$newDatef' <debutresa) OR ('$newDated'>finresa AND '$newDatef'>finresa)");
     }
 }
 
@@ -284,10 +303,10 @@ sub interrogation {
 
 sub menu_maj{
     print "=========================MENU========================= \n";
-    print "\t [1] Ajouter une chambre à un hôtel\n";    
-    print "\t [2] Modifier le nom du gérant d'un hôtel\n";    
-    print "\t [3] Annuler une réservation\n";    
-    print "\t [4] Ajouter une réservation\n";        
+    print "\t [1] Ajouter une chambre à un hôtel\n";
+    print "\t [2] Modifier le nom du gérant d'un hôtel\n";
+    print "\t [3] Annuler une réservation\n";
+    print "\t [4] Ajouter une réservation\n";
 }
 sub maj{
     my $answer = <>;
@@ -298,12 +317,12 @@ sub maj{
 
 sub menu_stats{
     print "=========================MENU========================= \n";
-    print "\t [1] Afficher le taux d'occupation d'un hôtel (7 derniers jours)\n";    
-    print "\t [2] Afficher le taux d'occupation de tous les hôtels (7 derniers jours)\n";    
-    print "\t [3] Afficher les ou les hôtels qui ont le plus grand taux d'occupation (7 derniers jours)\n";        
+    print "\t [1] Afficher le taux d'occupation d'un hôtel (7 derniers jours)\n";
+    print "\t [2] Afficher le taux d'occupation de tous les hôtels (7 derniers jours)\n";
+    print "\t [3] Afficher les ou les hôtels qui ont le plus grand taux d'occupation (7 derniers jours)\n";
 }
 
-my $boucle = 1; 
+my $boucle = 1;
 initialisation();
 while ($boucle == 1){
     menu;
@@ -333,7 +352,7 @@ while ($boucle == 1){
         }
     }
     if ($rep == 0){
-        $dbh -> disconnect();        
+        $dbh -> disconnect();
         exit;
     }
 }
