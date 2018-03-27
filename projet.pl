@@ -48,7 +48,7 @@ sub initialisation{
 
 
         CREATE TABLE Client(
-        NomClient text PRIMARY KEY,
+        NomClient text UNIQUE,
         PhoneClient text);
 
 
@@ -115,38 +115,6 @@ sub initialisation{
 
 } #Fin de la fonction initialisation
 
-sub save_html{
-    print "Quel nom voulez-vous donner à votre fichier ?";
-    my $nom_fichier = <>;
-    open (FICHIER, "> $nom_fichier ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
-    print FICHIER "<!DOCTYPE html> \n
-<html><head>
-<meta http-equiv='content-type' content='text/html; charset=windows-1252'>
-<title>Exemple de tableau 2</title>
-</head>
-
-<body>
- <table border='1'> 
-  <caption> Tableau 2</caption> 
-  <tbody><tr> ";
-
-    my $prep = $dbh->prepare(@_);
-    $prep->execute;
-    while (my $row = $prep->fetchrow_hashref) {
-        my @fig = sort(keys(%$row));
-        print FICHIER "<tr>";
-        foreach my $fname (@fig) {
-            print FICHIER"<td> $row->{$fname} </td>";
-            }
-    print FICHIER "</tr> \n";
-    }
-
-print FICHIER "</tbody></table> 
-</body></html>";
-    # print FICHIER "coucou";
-    close (FICHIER);
-}
-
 
 # ===================INTEGRATION===================
 
@@ -203,19 +171,34 @@ sub ajouter_chambre{
 
 }
 
+sub modifier_gerant{
+
+# UPDATE tablehotel
+# SET gerant = 'Martial'
+# WHERE gerant= 'dupont'
+
+
+}
+
 # ================== STATISTIQUES ===========
-sub taux_occupation {
-# Date : today and earlier week
-my($h) = @_;
-my $today = DateTime->new ( day => 22,
-                            month =>02,
-                            year =>2018
+sub dateCacl {
+my($date) = @_;
+my @convDate = split("/",$date);  
+my $today = DateTime->new ( day => $convDate[0],
+                            month =>$convDate[1],
+                            year =>$convDate[2]
                             );
 my $weekEarly = $today->clone->subtract( weeks => 1);
+return ($today,$weekEarly);
+}
+
+sub hotel_taux {
+# Date : today and earlier week
+my($today,$weekEarly,$h) = @_;
 
 # Main 
 my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Total number of chambers 
-my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND to_date(debutresa,'DD/MM/YYYY') <='$today' AND to_date(finresa,'DD/MM/YYYY') >= '$weekEarly');
+my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND to_date(debutresa,'DD/MM/YYYY') <='$today' AND to_date(finresa,'DD/MM/YYYY') >= '$weekEarly' GROUP BY numchambre);
 my $prep1 = $dbh->prepare($requete1);
 my $prep2 = $dbh->prepare($requete2);
 $prep1->execute;
@@ -223,15 +206,39 @@ $prep1->execute;
 my $taux;
 while (my($lineCount) = $prep1->fetchrow_array) {
     $prep2->execute;
-    if($lineCount == 0) {
-        return 0;
+    if ($prep2->rows == 0) {
+            return 0;
     }
         #or die 'Impossible d\'exécuter la requête : '.$prep->errstr;
     while (my($dateCount) = $prep2->fetchrow_array ) {
+        
         $taux = ($dateCount / $lineCount)*100;
         }
     }
     return $taux;
+}
+
+sub tout_hotel_taux {
+    my($today,$weekEarly,$option) = @_;
+    my $max = -1;
+    my $hotel;
+    my $requete1 = qq(SELECT hotel  FROM tablehotel);
+    my $prep1 = $dbh->prepare($requete1);
+    $prep1->execute;
+    while (my($h) = $prep1->fetchrow_array) {
+        my $taux = hotel_taux($today,$weekEarly,$h);
+        if($option == 2){
+            print "$h -> $taux% \n";
+        }elsif($option == 3){
+            if($taux > $max) {
+                $max = $taux;
+                $hotel = $h;
+            }
+        }
+    }
+    if($option == 3){
+        print "Meilleure taux d'occupation : $hotel -> $max% \n";
+    }
 }
 
 
@@ -309,36 +316,21 @@ while ($boucle == 1){
         menu_maj();
     }
     if ($rep == 3){
+        print "Quelle date date de référence ? (JJ/02/2018)\n";
+        chomp(my $date = <>);
+        my($today,$weekEarly) = dateCacl($date);
         menu_stats();
-        my $taux;
         my $option = <>;
+        my $taux;
         my $h;
         if ($option == 1) {
             print "Quel hôtel voulez-vous consulter ?\n";
-            $h = <>;
-            $taux = taux_occupation($h);
+            chomp($h = <>);
+            $taux = hotel_taux($today,$weekEarly,$h);
             print "$h -> $taux% \n";
-        }if($option == 2 or $option == 3) {
-            my @list = ("Bordeaux","Bruges","Talence","Cauderan","Pessac");
-            my $max = -1;
-                        for my $x(@list){
-                $taux = taux_occupation($x);
-                if($option == 2) {
-                    print "$x -> $taux% \n";
-                }else{
-                    if ($taux > $max) {
-                        $max = $taux;
-                        $h = $x;
-                    }  
-                }
-            }
-            if ($option == 3) {
-                print "Meilleurs taux d'occupation : $h -> $max%\n";
-            }
+        }else {
+            tout_hotel_taux($today,$weekEarly,$option);
         }
-    }
-     if ($rep == 4){
-        save_html("SELECT gerant,hotel  FROM tablehotel");
     }
     if ($rep == 0){
         $dbh -> disconnect();        
