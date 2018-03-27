@@ -115,6 +115,38 @@ sub initialisation{
 
 } #Fin de la fonction initialisation
 
+sub save_html{
+    print "Quel nom voulez-vous donner à votre fichier ?";
+    my $nom_fichier = <>;
+    open (FICHIER, "> $nom_fichier ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
+    print FICHIER "<!DOCTYPE html> \n
+<html><head>
+<meta http-equiv='content-type' content='text/html; charset=windows-1252'>
+<title>Exemple de tableau 2</title>
+</head>
+
+<body>
+ <table border='1'> 
+  <caption> Tableau 2</caption> 
+  <tbody><tr> ";
+
+    my $prep = $dbh->prepare(@_);
+    $prep->execute;
+    while (my $row = $prep->fetchrow_hashref) {
+        my @fig = sort(keys(%$row));
+        print FICHIER "<tr>";
+        foreach my $fname (@fig) {
+            print FICHIER"<td> $row->{$fname} </td>";
+            }
+    print FICHIER "</tr> \n";
+    }
+
+print FICHIER "</tbody></table> 
+</body></html>";
+    # print FICHIER "coucou";
+    close (FICHIER);
+}
+
 
 # ===================INTEGRATION===================
 
@@ -168,15 +200,6 @@ sub ajouter_chambre{
 # ================================
     my $insert_chambre = $dbh->prepare("INSERT INTO Chambre VALUES(?,?,?,?,?)");
     $insert_chambre->execute($rep_numChambre,$rep_hotel,$rep_couchage,$rep_basseSaison,$rep_hauteSaison);
-
-}
-
-sub modifier_gerant{
-
-# UPDATE tablehotel
-# SET gerant = 'Martial'
-# WHERE gerant= 'dupont'
-
 
 }
 
@@ -313,6 +336,9 @@ while ($boucle == 1){
                 print "Meilleurs taux d'occupation : $h -> $max%\n";
             }
         }
+    }
+     if ($rep == 4){
+        save_html("SELECT gerant,hotel  FROM tablehotel");
     }
     if ($rep == 0){
         $dbh -> disconnect();        
