@@ -7,7 +7,7 @@ use DateTime;
 
 my $file = "Hotels1.csv";
 
-my $dbh = DBI -> connect("DBI:Pg:dbname=sgoncal1;host=dbserver","sgoncal1","ANST4-CASE4",{'RaiseError' => 1});
+my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});
 
 sub initialisation{
         
@@ -191,7 +191,7 @@ my $today = DateTime->new ( day => 22,
 my $weekEarly = $today->clone->subtract( weeks => 1);
 
 # Main 
-my $requete1 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h'); # Total number of chambers 
+my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Total number of chambers 
 my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND to_date(debutresa,'DD/MM/YYYY') <='$today' AND to_date(finresa,'DD/MM/YYYY') >= '$weekEarly');
 my $prep1 = $dbh->prepare($requete1);
 my $prep2 = $dbh->prepare($requete2);
