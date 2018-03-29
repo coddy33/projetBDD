@@ -58,7 +58,6 @@ sub initialisation{
     PrixHauteSaison integer,
     PRIMARY KEY(NumChambre,Hotel));
     ");
-
     $sth->execute();
 
     my $test = 1;#Permet de faire un test dans la boucle de lecture du CSV.
@@ -117,15 +116,15 @@ sub initialisation{
 # ============================SAUVEGARDER DANS UN FICHIER================
 sub save_html{
     #
-    # Cette fonction prend en argument le nom que le souhaite donner à la table 
+    # Cette fonction prend en argument le nom que le souhaite donner à la table
     # et une requête. Elle enregistre dans un fichier html le résultat de la requete présenté
     # sous forme de tableau.
     #
-    # Prend 2 arguments : 
+    # Prend 2 arguments :
     #   -$requete : premier argument, entrer la requete
     #   -$nom_table : deuxieme argument, donner le nom de la table
-    # 
-    my($arg1,$arg2) = @_;
+    #
+    my($requete,$nom_table) = @_;
     print "Quel nom voulez-vous donner à votre fichier ?";
     my $nom_fichier = <>;
     my $table = "tableHotel";
@@ -133,11 +132,12 @@ sub save_html{
     print FICHIER "<!DOCTYPE html> \n
     <html><head>
     <meta http-equiv='content-type' content='text/html; charset=windows-1252'>
+    <meta charset='UTF-8'>
     <title>$nom_table</title>
     </head>
     <body>
-    <table border='1'> 
-    <caption> $nom_table</caption> 
+    <table border='1'>
+    <caption> $nom_table    </caption>
     <tbody><tr> ";
 
     my $prep = $dbh->prepare($requete);
@@ -150,7 +150,7 @@ sub save_html{
             }
     print FICHIER "</tr> \n";
     }
-    print FICHIER "</tbody></table> 
+    print FICHIER "</tbody></table>
     </body></html>";
     # print FICHIER "coucou";
     close (FICHIER);
@@ -181,9 +181,13 @@ sub interrogation {
     if ($rep == 2){
         print "Le nombre de gérants est de : \n";
         Affiche_interr("SELECT COUNT(DISTINCT gerant)  FROM tablehotel");
+        print "Voulez-vous sauvegarder ?";
+        save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants :");
     } if ($rep == 3){
         print "Les gérants qui gérent au moins deux hotels sont : \n";
         Affiche_interr("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
+        print "Voulez-vous sauvegarder ?";
+        save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gèrent au moins deux Hôtels :");
     }if ($rep == 4){
         print"Entrez une date de debut de reservation (JJ/MM/AAAA)\n";
         chomp(my $dated=<>);#Demande la date a l'utilisateur
@@ -236,13 +240,50 @@ sub ajouter_chambre{
 
 }
 #Fonction qui permet de modifier le gérant.
+#Fonction qui permet de modifier le gérant.
 sub modifier_gerant{
-        # my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
-        # my $prep = $dbh->prepare($requete);
-        # $prep->execute;
-# UPDATE tablehotel
-# SET gerant = 'Martial'
-# WHERE gerant= 'dupont'
+  print "Quel gerant voulez vous modifier ?\n";
+  Affiche_interr("SELECT gerant,hotel  FROM tablehotel\n");
+  chomp(my $oldgerant=<>);
+  print "Quel est le nouveau nom du gérant ?\n";
+  chomp(my $newgerant=<>);
+  my $requete = "UPDATE tablehotel SET gerant='$newgerant' WHERE gerant='$oldgerant'";
+  my $prep = $dbh->prepare($requete);
+  $prep->execute;
+
+}
+#Fonction qui permet d'annuler une reservation.
+# sub annuler_resa{
+#
+# }
+#Fonction qui permet de rajouter un reservation.
+sub ajouter_resa{
+    my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
+    my $prep = $dbh->prepare($requete);
+    $prep->execute;
+
+        while (my($hotel) = $prep->fetchrow_array ){
+        print "$hotel \n";
+        }
+    print "Dans quel hotel voulez vous reserver ?\n";
+    my $hotel = <>;
+    print "Quel est le numéro de la chambre ?\n";
+    my $numchambre = <>;
+    print "Quelle est votre date d'arrivée ?\n";
+    my $debut = <>;
+    print "Quelle est votre date de départ ?  \n";
+    my $fin = <>;
+    print "Quel est votre nom ?  \n";
+    my $nom = <>;
+
+    $requete="SELECT MAX(numresa) FROM reservation";
+    $prep= $dbh->prepare($requete);
+    $prep->execute;
+    my $numresa = $prep->fetchrow_array();
+    $numresa=$numresa+1;
+    my $insert_resa = $dbh->prepare("INSERT INTO reservation VALUES(?,?,?,?,?,?)");
+    $insert_resa->execute($numresa,$debut,$fin,$numchambre,$hotel,$nom);#Insertion dans la table de la nouvelle chambre
+
 }
 # ===========================================
 
@@ -318,6 +359,7 @@ sub menu {
     print "\t [1] Interrogation \n";
     print "\t [2] Mise à jour \n";
     print "\t [3] Statistiques \n";
+    print "\t [4] reinitialiser la base de données \n";
     print "\t [0] Quitter \n";
 }
 
@@ -351,11 +393,15 @@ sub maj{
         ajouter_chambre();
     }
     if ($rep == 2){
+      modifier_gerant();
 
     }
     if ($rep == 3){
+
     }
     if ($rep == 4){
+        ajouter_resa();
+
 
     }
 }
@@ -372,11 +418,11 @@ sub menu_stats{
 }
 
 sub stats{
-print "Quelle date date de référence ? (JJ/02/2018)\n";
-        chomp(my $date = <>);
-        my($today,$weekEarly) = dateCacl($date);
+    my $option = <>;
+    print "Quelle date date de référence ? (JJ/02/2018)\n";
+    chomp(my $date = <>);
+    my($today,$weekEarly) = dateCacl($date);
 
-        my $option = <>;
         my $taux;
         my $h;
         if ($option == 1) {
@@ -395,7 +441,6 @@ print "\033[2J";
 print "\033[0;0H";
 
 my $boucle = 1;
-initialisation();#lance l'initialisation de la table.
 while ($boucle == 1){
     menu;#Affiche le menu.
     my $rep = <>;
@@ -410,6 +455,9 @@ while ($boucle == 1){
     if ($rep == 3){
         menu_stats();
         stats();
+    }
+    if ($rep == 4){
+        initialisation();#lance l'initialisation de la table.
     }
     if ($rep == 0){
         $dbh -> disconnect();
