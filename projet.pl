@@ -114,6 +114,47 @@ sub initialisation{
 
 } #Fin de la fonction initialisation
 
+# ============================SAUVEGARDER DANS UN FICHIER================
+sub save_html{
+    #
+    # Cette fonction prend en argument le nom que le souhaite donner à la table 
+    # et une requête. Elle enregistre dans un fichier html le résultat de la requete présenté
+    # sous forme de tableau.
+    #
+    # Prend 2 arguments : 
+    #   -$requete : premier argument, entrer la requete
+    #   -$nom_table : deuxieme argument, donner le nom de la table
+    # 
+    my($arg1,$arg2) = @_;
+    print "Quel nom voulez-vous donner à votre fichier ?";
+    my $nom_fichier = <>;
+    my $table = "tableHotel";
+    open (FICHIER, "> $nom_fichier ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
+    print FICHIER "<!DOCTYPE html> \n
+    <html><head>
+    <meta http-equiv='content-type' content='text/html; charset=windows-1252'>
+    <title>$nom_table</title>
+    </head>
+    <body>
+    <table border='1'> 
+    <caption> $nom_table</caption> 
+    <tbody><tr> ";
+
+    my $prep = $dbh->prepare($requete);
+    $prep->execute;
+    while (my $row = $prep->fetchrow_hashref) {
+        my @fig = sort(keys(%$row));
+        print FICHIER "<tr>";
+        foreach my $fname (@fig) {
+            print FICHIER"<td> $row->{$fname} </td>";
+            }
+    print FICHIER "</tr> \n";
+    }
+    print FICHIER "</tbody></table> 
+    </body></html>";
+    # print FICHIER "coucou";
+    close (FICHIER);
+}
 
 # ===================INTERROGATION===================
 #Fonction qui permet d'afficher les resultats d'une requette SQL.
@@ -144,7 +185,7 @@ sub interrogation {
         print "Les gérants qui gérent au moins deux hotels sont : \n";
         Affiche_interr("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
     }if ($rep == 4){
-        print"Entrez une date de debut de reservation\n";
+        print"Entrez une date de debut de reservation (JJ/MM/AAAA)\n";
         chomp(my $dated=<>);#Demande la date a l'utilisateur
         my @convdated=split("/",$dated);#Split l'entrée de l'utilisateur via '/' et les mets dans des listes
         my $newDated = DateTime->new (day => $convdated[0],
@@ -282,17 +323,22 @@ sub menu {
 
 # ===================INTERROGATION===================
 sub menu_interrogation {
-    print "=========================MENU========================= \n";
+    print "\033[2J";
+    print "\033[0;0H";
+    print "=========================INTERROGATION========================= \n";
     print "\t [1] Afficher les nom des gérants \n";
     print "\t [2] Afficher le nombre des gérants \n";
     print "\t [3] Afficher les personnes qui gèrent au moins deux hôtels \n";
     print "\t [4] Afficher les hôtels où il y a au moins une chambre de libre \n";
 }
 
-# ===================MISA A JOUR===================
+
+# ===================MISE A JOUR===================
 
 sub menu_maj{
-    print "=========================MENU========================= \n";
+    print "\033[2J";
+    print "\033[0;0H";
+    print "=========================MISE A JOUR========================= \n";
     print "\t [1] Ajouter une chambre à un hôtel\n";
     print "\t [2] Modifier le nom du gérant d'un hôtel\n";
     print "\t [3] Annuler une réservation\n";
@@ -317,7 +363,9 @@ sub maj{
 # ===================STATISTIQUES===================
 
 sub menu_stats{
-    print "=========================MENU========================= \n";
+    print "\033[2J";
+    print "\033[0;0H";
+    print "=========================STATISTIQUES========================= \n";
     print "\t [1] Afficher le taux d'occupation d'un hôtel (7 derniers jours)\n";
     print "\t [2] Afficher le taux d'occupation de tous les hôtels (7 derniers jours)\n";
     print "\t [3] Afficher les ou les hôtels qui ont le plus grand taux d'occupation (7 derniers jours)\n";
@@ -343,9 +391,11 @@ print "Quelle date date de référence ? (JJ/02/2018)\n";
 
 # ===================MAIN===================
 
+print "\033[2J";
+print "\033[0;0H";
+
 my $boucle = 1;
 initialisation();#lance l'initialisation de la table.
-
 while ($boucle == 1){
     menu;#Affiche le menu.
     my $rep = <>;
