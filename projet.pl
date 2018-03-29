@@ -1,137 +1,164 @@
 #!/bin/env perl
-
-use strict;
+#use strict; # A REMETTRE !!!!!!!!!!!!!!!!!!!
 use warnings;
 use DBI;
 use DateTime;
+use POSIX qw(strftime);
 
-my $file = "Hotels1.csv";
-
-my $dbh = DBI -> connect("DBI:Pg:dbname=mbodet911e;host=dbserver","mbodet911e","idiot21",{'RaiseError' => 1});
+my $file = "Hotels1.csv";#Chargement du CSV, qui permet l'initialisation de la table si elle n'existe pas.
+my $dbh = DBI -> connect("DBI:Pg:dbname=mbodet911e;host=dbserver","mbodet911e","idiot21",{'RaiseError' => 1});#Connection a la base
 
 sub initialisation{
+    #Teste l'existance de la table, et si existe, on n'ecrase pas avec les donnée du CSV.
+    $dbh -> do ("drop table if exists initTable cascade");
+    $dbh -> do ("drop table if exists TableHotel cascade");
+    $dbh -> do ("drop table if exists Reservation cascade");
+    $dbh -> do ("drop table if exists client cascade");
+    $dbh -> do ("drop table if exists chambre cascade");
 
-        $dbh -> do ("drop table if exists initTable cascade");
-        $dbh -> do ("drop table if exists TableHotel cascade");
-        $dbh -> do ("drop table if exists Reservation cascade");
-        $dbh -> do ("drop table if exists client cascade");
-        $dbh -> do ("drop table if exists chambre cascade");
+    #Si elle n'existe pas, on crée la table
+    my $sth = $dbh->prepare("
 
-        my $sth = $dbh->prepare("
+    create table initTable(
+    Hotel text,
+    Gerant text,
+    Etoiles integer,
+    NumChambre integer,
+    TypeCouchage text,
+    PrixBasseSaison integer,
+    PrixHauteSaison integer,
+    NumResa integer,
+    DebutResa text,
+    FinResa text,
+    NomClient text,
+    PhoneClient text);
 
-        create table initTable(
-        Hotel text,
-        Gerant text,
-        Etoiles integer,
-        NumChambre integer,
-        TypeCouchage text,
-        PrixBasseSaison integer,
-        PrixHauteSaison integer,
-        NumResa integer,
-        DebutResa date,
-        FinResa date,
-        NomClient text,
-        PhoneClient text);
+    create table TableHotel(
+    Hotel text PRIMARY KEY,
+    Gerant text,
+    Etoiles integer);
 
-        create table TableHotel(
-        Hotel text PRIMARY KEY,
-        Gerant text,
-        Etoiles integer);
+    CREATE TABLE Reservation(
+    NumResa integer PRIMARY KEY,
+    DebutResa text,
+    FinResa text,
+    NumChambre integer,
+    Hotel text,
+    NomClient text);
 
-        CREATE TABLE Reservation(
-        NumResa integer PRIMARY KEY,
-        DebutResa date,
-        FinResa date,
-        NumChambre integer,
-        Hotel text,
-        NomClient text);
+    CREATE TABLE Client(
+    NomClient text UNIQUE,
+    PhoneClient text);
 
+    CREATE TABLE Chambre(
+    NumChambre text,
+    Hotel text,
+    Typecouchage text,
+    PrixBasseSaison integer,
+    PrixHauteSaison integer,
+    PRIMARY KEY(NumChambre,Hotel));
+    ");
 
-        CREATE TABLE Client(
-        NomClient text PRIMARY KEY,
-        PhoneClient text);
+    $sth->execute();
 
+    my $test = 1;#Permet de faire un test dans la boucle de lecture du CSV.
+    open(HOTEL,$file) or die("$file inexistant \n");#Si le fichier n'existe pas, il retourne "Nom_du_fichier inexistant"
+    my $remplissage = $dbh -> prepare("insert into initTable values (?,?,?,?,?,?,?,?,?,?,?,?)");
 
-        CREATE TABLE Chambre(
-        NumChambre text,
-        Hotel text,
-        Typecouchage text,
-        PrixBasseSaison integer,
-        PrixHauteSaison integer,
-        PRIMARY KEY(NumChambre,Hotel));
-        ");
+    while (<HOTEL>){#Boucle qui lit les lignes du fichier CSV.
 
-
-
-        $sth->execute();
-
-        my $x = 1;
-        open(HOTEL,$file) or die("$file inexistant \n");
-        my $remplissage = $dbh -> prepare("insert into initTable values (?,?,?,?,?,?,?,?,?,?,?,?)");
-        while (<HOTEL>){
-            if ($x != 1){
+        if ($test != 1){#Se test permet d'enlever la premiere ligne lors de la creation de la base.
             chomp($_);
             my @fields = split(',',$_);
             $remplissage -> execute($fields[0],$fields[1],int($fields[2]),int($fields[3]),$fields[4],int($fields[5]),int($fields[6]),int($fields[7]),$fields[8],$fields[9],$fields[10],$fields[11]);
-        }
-            $x = $x -1;
-        }
+            }
+        $test = $test -1;
+    }
 
-        my $initHotel = $dbh->prepare("
+    #Remplissage de la table.
+    my $initHotel = $dbh->prepare("
 
-        insert into TableHotel(
-        select hotel, gerant, etoiles
-        From inittable
-        GROUP BY hotel,gerant,etoiles );
-        ");
+    INSERT into TableHotel(
+    SELECT hotel, gerant, etoiles
+    FROM inittable
+    GROUP BY hotel,gerant,etoiles );
+    ");
 
-        my $initResa = $dbh->prepare("
-        INSERT INTO Reservation(
-        SELECT NumResa, DebutResa, FinResa, NumChambre, Hotel, NomClient
-        FROM InitTable
-        GROUP BY NumResa, DebutResa, FinResa, NumChambre, Hotel, NomClient );
-        ");
+    my $initResa = $dbh->prepare("
+    INSERT INTO Reservation(
+    SELECT NumResa, DebutResa, FinResa, NumChambre, Hotel, NomClient
+    FROM InitTable
+    GROUP BY NumResa, DebutResa, FinResa, NumChambre, Hotel, NomClient );
+    ");
 
-        my $initClient = $dbh->prepare("
-        INSERT INTO Client(
-        SELECT NomClient, PhoneClient
-        FROM InitTable
-        GROUP BY NomClient,PhoneClient);
-        ");
+    my $initClient = $dbh->prepare("
+    INSERT INTO Client(
+    SELECT NomClient, PhoneClient
+    FROM InitTable
+    GROUP BY NomClient,PhoneClient);
+    ");
 
-        my $initChambre = $dbh->prepare("
-        INSERT INTO Chambre(
-        SELECT NumChambre, Hotel, TypeCouchage, PrixBasseSaison, PrixHauteSaison
-        FROM InitTable
-        GROUP BY NumChambre, Hotel, TypeCouchage, PrixBasseSaison, PrixHauteSaison);
-        ");
+    my $initChambre = $dbh->prepare("
+    INSERT INTO Chambre(
+    SELECT NumChambre, Hotel, TypeCouchage, PrixBasseSaison, PrixHauteSaison
+    FROM InitTable
+    GROUP BY NumChambre, Hotel, TypeCouchage, PrixBasseSaison, PrixHauteSaison);
+    ");
 
-        $initHotel->execute();
-        $initResa->execute();
-        $initClient->execute();
-        $initChambre->execute();
+    $initHotel->execute();
+    $initResa->execute();
+    $initClient->execute();
+    $initChambre->execute();
 
-        close(HOTEL);
+    close(HOTEL);#Fermeture du fichier CSV
 
 } #Fin de la fonction initialisation
 
+# ============================SAUVEGARDER DANS UN FICHIER================
+sub save_html{
+    #
+    # Cette fonction prend en argument le nom que le souhaite donner à la table
+    # et une requête. Elle enregistre dans un fichier html le résultat de la requete présenté
+    # sous forme de tableau.
+    #
+    # Prend 2 arguments :
+    #   -$requete : premier argument, entrer la requete
+    #   -$nom_table : deuxieme argument, donner le nom de la table
+    #
+    my($arg1,$arg2) = @_;
+    print "Quel nom voulez-vous donner à votre fichier ?";
+    my $nom_fichier = <>;
+    my $table = "tableHotel";
+    open (FICHIER, "> $nom_fichier ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
+    print FICHIER "<!DOCTYPE html> \n
+    <html><head>
+    <meta http-equiv='content-type' content='text/html; charset=windows-1252'>
+    <title>$nom_table</title>
+    </head>
+    <body>
+    <table border='1'>
+    <caption> $nom_table</caption>
+    <tbody><tr> ";
 
-# ===================INTEGRATION===================
+    my $prep = $dbh->prepare($requete);
+    $prep->execute;
+    while (my $row = $prep->fetchrow_hashref) {
+        my @fig = sort(keys(%$row));
+        print FICHIER "<tr>";
+        foreach my $fname (@fig) {
+            print FICHIER"<td> $row->{$fname} </td>";
+            }
+    print FICHIER "</tr> \n";
+    }
+    print FICHIER "</tbody></table>
+    </body></html>";
+    # print FICHIER "coucou";
+    close (FICHIER);
+}
 
-# sub test{
-#     # print "coucou";
-#     my $prep = $dbh->prepare(@_);
-#     $prep->execute;
-#         #or die 'Impossible d\'eécuter la requête : '.$prep->errstr;
-#     # return $prep;
-#     my @col1, my @col2, my @col3;
-#     while (my($cell1, $cell2) = @_->fetchrow_array ) {
-#     push(@col1,$cell1);
-#     push(@col2,$cell2);
-#     }
-# }
-
-sub test{
+# ===================INTERROGATION===================
+#Fonction qui permet d'afficher les resultats d'une requette SQL.
+sub Affiche_interr{
     my $prep = $dbh->prepare(@_);
     $prep->execute;
     while (my $row = $prep->fetchrow_hashref) {
@@ -143,19 +170,57 @@ sub test{
     }
 }
 
+
+sub interrogation {
+    my $rep = <>;
+
+    if ($rep == 1){
+        print "Les gérants se nomment : \n";
+        Affiche_interr("SELECT gerant,hotel  FROM tablehotel");
+    }
+    if ($rep == 2){
+        print "Le nombre de gérants est de : \n";
+        Affiche_interr("SELECT COUNT(DISTINCT gerant)  FROM tablehotel");
+    } if ($rep == 3){
+        print "Les gérants qui gérent au moins deux hotels sont : \n";
+        Affiche_interr("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
+    }if ($rep == 4){
+        print"Entrez une date de debut de reservation (JJ/MM/AAAA)\n";
+        chomp(my $dated=<>);#Demande la date a l'utilisateur
+        my @convdated=split("/",$dated);#Split l'entrée de l'utilisateur via '/' et les mets dans des listes
+        my $newDated = DateTime->new (day => $convdated[0],
+                                      month => $convdated[1],
+                                      year => $convdated[2]
+                                      );
+        print"Entrez une date de fin de reservation\n";
+        chomp(my $datef=<>);
+        my @convdatef=split("/",$datef);
+        my $newDatef = DateTime->new (day => $convdatef[0],
+                                      month => $convdatef[1],
+                                      year => $convdatef[2]
+                                      );
+
+        $newDated=$newDated->dmy('/');#Permet d'avoir la date sous le format JJ/MM/AAAA
+        $newDatef=$newDatef->dmy('/');
+        print "Les hotels qui ont au moins une chambre de libre sont : \n";
+        Affiche_interr("SELECT hotel FROM reservation WHERE ('$newDated' < debutresa AND '$newDatef' <debutresa) OR ('$newDated'>finresa AND '$newDatef'>finresa)");
+    }
+}
 # =================================================
 
 
 # ===================MISE A JOUR===================
-
+#Fonction qui permet d'ajouter une chambre a la table.
 sub ajouter_chambre{
+
     print "Pour quel hotel voulez vous ajouter une chambre ? \n";
     my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
     my $prep = $dbh->prepare($requete);
     $prep->execute;
-    while (my($hotel) = $prep->fetchrow_array ) {
-          print "$hotel \n";
-    }
+
+        while (my($hotel) = $prep->fetchrow_array ){
+        print "$hotel \n";
+        }
     my $rep_hotel = <>;
     print "Quel est le numéro de la chambre ?";
     my $rep_numChambre = <>;
@@ -165,50 +230,121 @@ sub ajouter_chambre{
     my $rep_basseSaison = <>;
     print "Quel est le haute basse saison ?  \n";
     my $rep_hauteSaison = <>;
-# ================================
+
     my $insert_chambre = $dbh->prepare("INSERT INTO Chambre VALUES(?,?,?,?,?)");
-    $insert_chambre->execute($rep_numChambre,$rep_hotel,$rep_couchage,$rep_basseSaison,$rep_hauteSaison);
+    $insert_chambre->execute($rep_numChambre,$rep_hotel,$rep_couchage,$rep_basseSaison,$rep_hauteSaison);#Insertion dans la table de la nouvelle chambre
 
 }
-
+#Fonction qui permet de modifier le gérant.
+#Fonction qui permet de modifier le gérant.
 sub modifier_gerant{
-
-# UPDATE tablehotel
-# SET gerant = 'Martial'
-# WHERE gerant= 'dupont'
-
+  print "Quel gerant voulez vous modifier ?\n";
+  Affiche_interr("SELECT gerant,hotel  FROM tablehotel\n");
+  chomp(my $oldgerant=<>);
+  print "Quel est le nouveau nom du gérant ?\n";
+  chomp(my $newgerant=<>);
+  my $requete = "UPDATE tablehotel SET gerant='$newgerant' WHERE gerant='$oldgerant'";
+  my $prep = $dbh->prepare($requete);
+  $prep->execute;
 
 }
+#Fonction qui permet d'annuler une reservation.
+# sub annuler_resa{
+#
+# }
+#Fonction qui permet de rajouter un reservation.
+sub ajouter_resa{
+    my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
+    my $prep = $dbh->prepare($requete);
+    $prep->execute;
 
-# ================== STATISTIQUES ===========
-sub taux_occupation {
-# Date : today and earlier week
-my($h) = @_;
-my $today = DateTime->new ( day => 22,
-                            month =>02,
-                            year =>2018
+        while (my($hotel) = $prep->fetchrow_array ){
+        print "$hotel \n";
+        }
+    print "Dans quel hotel voulez vous reserver ?\n";
+    my $hotel = <>;
+    print "Quel est le numéro de la chambre ?\n";
+    my $numchambre = <>;
+    print "Quelle est votre date d'arrivée ?\n";
+    my $debut = <>;
+    print "Quelle est votre date de départ ?  \n";
+    my $fin = <>;
+    print "Quel est votre nom ?  \n";
+    my $nom = <>;
+
+    $requete="SELECT MAX(numresa) FROM reservation";
+    $prep= $dbh->prepare($requete);
+    $prep->execute;
+    my $numresa = $prep->fetchrow_array();
+    $numresa=$numresa+1;
+    my $insert_resa = $dbh->prepare("INSERT INTO reservation VALUES(?,?,?,?,?,?)");
+    $insert_resa->execute($numresa,$debut,$fin,$numchambre,$hotel,$nom);#Insertion dans la table de la nouvelle chambre
+
+}
+# ===========================================
+
+
+# ==================STATISTIQUES=============
+
+sub dateCacl {
+
+my($date) = @_;
+my @convDate = split("/",$date);
+my $today = DateTime->new ( day => $convDate[0],
+                            month =>$convDate[1],
+                            year =>$convDate[2]
                             );
 my $weekEarly = $today->clone->subtract( weeks => 1);
+return ($today,$weekEarly);
+}
 
-# Main
-my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Total number of chambers
-my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND to_date(debutresa,'DD/MM/YYYY') <='$today' AND to_date(finresa,'DD/MM/YYYY') >= '$weekEarly');
-my $prep1 = $dbh->prepare($requete1);
-my $prep2 = $dbh->prepare($requete2);
-$prep1->execute;
-    #or die 'Impossible d\'exécuter la requête : '.$prep->errstr;
-my $taux;
-while (my($lineCount) = $prep1->fetchrow_array) {
-    $prep2->execute;
-    if($lineCount == 0) {
-        return 0;
-    }
-        #or die 'Impossible d\'exécuter la requête : '.$prep->errstr;
-    while (my($dateCount) = $prep2->fetchrow_array ) {
-        $taux = ($dateCount / $lineCount)*100;
+sub hotel_taux {
+    # Date: aujourd'hui et semaine derniere.
+    my($today,$weekEarly,$h) = @_;
+
+    my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Nombre total de chambre
+    my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND to_date(debutresa,'DD/MM/YYYY') <='$today' AND to_date(finresa,'DD/MM/YYYY') >= '$weekEarly' GROUP BY numchambre);
+    my $prep1 = $dbh->prepare($requete1);
+    my $prep2 = $dbh->prepare($requete2);
+
+    $prep1->execute;
+
+    my $taux;
+
+    while (my($lineCount) = $prep1->fetchrow_array) {
+        $prep2->execute;
+        if ($prep2->rows == 0) {
+                return 0;
+        }
+        while (my($dateCount) = $prep2->fetchrow_array ) {
+            $taux = ($dateCount / $lineCount)*100;#Calcul du taux de reservation.
         }
     }
     return $taux;
+}
+#Taux pour tout les hotels
+sub tout_hotel_taux {
+
+    my($today,$weekEarly,$option) = @_;
+    my $max = -1;
+    my $hotel;
+    my $requete1 = qq(SELECT hotel  FROM tablehotel);
+    my $prep1 = $dbh->prepare($requete1);
+    $prep1->execute;
+    while (my($h) = $prep1->fetchrow_array) {
+        my $taux = hotel_taux($today,$weekEarly,$h);
+        if($option == 2){#Si on veux le taux pour tous les hotels
+            print "$h -> $taux% \n";
+    }elsif($option == 3){#Ou afficher celui qui a le plus haut taux
+            if($taux > $max) {
+                $max = $taux;
+                $hotel = $h;
+            }
+        }
+    }
+    if($option == 3){
+        print "Meilleure taux d'occupation : $hotel -> $max% \n";
+    }
 }
 
 
@@ -222,67 +358,87 @@ sub menu {
     print "\t [0] Quitter \n";
 }
 
-
+# ===================INTERROGATION===================
 sub menu_interrogation {
-    print "=========================MENU========================= \n";
+    print "\033[2J";
+    print "\033[0;0H";
+    print "=========================INTERROGATION========================= \n";
     print "\t [1] Afficher les nom des gérants \n";
     print "\t [2] Afficher le nombre des gérants \n";
     print "\t [3] Afficher les personnes qui gèrent au moins deux hôtels \n";
     print "\t [4] Afficher les hôtels où il y a au moins une chambre de libre \n";
 }
-sub interrogation {
-    my $rep = <>;
-    if ($rep == 1){
-        print "Les gérants se nomment : \n";
-        test("SELECT gerant,hotel  FROM tablehotel");
-    }
-    if ($rep == 2){
-        print "Le nombre de gérants est de : \n";
-        test("SELECT COUNT(DISTINCT gerant)  FROM tablehotel");
-    } if ($rep == 3){
-        print "Les gérants qui gérent au moins deux hotels sont : \n";
-        test("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
-    }if ($rep == 4){
-        chomp(my $dated=<>);
-        my @convdate=split("-",$dated);
-        my $newDate = DateTime->new ( day => $convdate[0],
-                                    month => $convdate[1],
-                                    year => $convdate[2]
-                                    );
-        print "Les hotels qui ont au moins une chambre de libre sont : \n";
-        test("SELECT hotel FROM reservation WHERE debutresa > '$newDate'");
-    }
-}
 
 
-# SELECT hotel FROM  GROUP BY NomImmeuble HAVING   COUNT(*) > 3
-
+# ===================MISE A JOUR===================
 
 sub menu_maj{
-    print "=========================MENU========================= \n";
+    print "\033[2J";
+    print "\033[0;0H";
+    print "=========================MISE A JOUR========================= \n";
     print "\t [1] Ajouter une chambre à un hôtel\n";
     print "\t [2] Modifier le nom du gérant d'un hôtel\n";
     print "\t [3] Annuler une réservation\n";
     print "\t [4] Ajouter une réservation\n";
 }
+
 sub maj{
-    my $answer = <>;
-    if ($answer == 1){
+    my $rep = <>;
+    if ($rep == 1){
         ajouter_chambre();
+    }
+    if ($rep == 2){
+
+    }
+    if ($rep == 3){
+        modifier_gerant();
+
+    }
+    if ($rep == 4){
+        ajouter_resa();
+
+
     }
 }
 
+# ===================STATISTIQUES===================
+
 sub menu_stats{
-    print "=========================MENU========================= \n";
+    print "\033[2J";
+    print "\033[0;0H";
+    print "=========================STATISTIQUES========================= \n";
     print "\t [1] Afficher le taux d'occupation d'un hôtel (7 derniers jours)\n";
     print "\t [2] Afficher le taux d'occupation de tous les hôtels (7 derniers jours)\n";
     print "\t [3] Afficher les ou les hôtels qui ont le plus grand taux d'occupation (7 derniers jours)\n";
 }
 
+sub stats{
+    my $option = <>;
+    print "Quelle date date de référence ? (JJ/02/2018)\n";
+    chomp(my $date = <>);
+    my($today,$weekEarly) = dateCacl($date);
+
+        my $taux;
+        my $h;
+        if ($option == 1) {
+            print "Quel hôtel voulez-vous consulter ?\n";
+            chomp($h = <>);
+            $taux = hotel_taux($today,$weekEarly,$h);
+            print "$h -> $taux% \n";
+        }else {
+            tout_hotel_taux($today,$weekEarly,$option);
+        }
+}
+
+# ===================MAIN===================
+
+print "\033[2J";
+print "\033[0;0H";
+
 my $boucle = 1;
-initialisation();
+initialisation();#lance l'initialisation de la table.
 while ($boucle == 1){
-    menu;
+    menu;#Affiche le menu.
     my $rep = <>;
     if ($rep == 1){
         menu_interrogation();
@@ -290,35 +446,11 @@ while ($boucle == 1){
     }
     if ($rep == 2){
         menu_maj();
+        maj();
     }
     if ($rep == 3){
         menu_stats();
-        my $taux;
-        my $option = <>;
-        my $h;
-        if ($option == 1) {
-            print "Quel hôtel voulez-vous consulter ?\n";
-            $h = <>;
-            $taux = taux_occupation($h);
-            print "$h -> $taux% \n";
-        }if($option == 2 or $option == 3) {
-            my @list = ("Bordeaux","Bruges","Talence","Cauderan","Pessac");
-            my $max = -1;
-                        for my $x(@list){
-                $taux = taux_occupation($x);
-                if($option == 2) {
-                    print "$x -> $taux% \n";
-                }else{
-                    if ($taux > $max) {
-                        $max = $taux;
-                        $h = $x;
-                    }
-                }
-            }
-            if ($option == 3) {
-                print "Meilleurs taux d'occupation : $h -> $max%\n";
-            }
-        }
+        stats();
     }
     if ($rep == 0){
         $dbh -> disconnect();
