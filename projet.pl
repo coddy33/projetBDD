@@ -1,9 +1,15 @@
 #!/bin/env perl
-#use strict; # A REMETTRE !!!!!!!!!!!!!!!!!!!
+use strict; # A REMETTRE !!!!!!!!!!!!!!!!!!!
 use warnings;
 use DBI;
 use DateTime;
 use POSIX qw(strftime);
+use Date::Calc qw(Delta_Days);
+
+use Data::Dumper;
+
+use DateTime::Duration;
+use DateTime::Format::Strptime;
 
 my $file = "Hotels1.csv";#Chargement du CSV, qui permet l'initialisation de la table si elle n'existe pas.
 my $dbh = DBI -> connect("DBI:Pg:dbname=mbodet911e;host=dbserver","mbodet911e","idiot21",{'RaiseError' => 1});#Connection a la base
@@ -125,10 +131,10 @@ sub save_html{
     #   -$nom_table : deuxieme argument, donner le nom de la table
     #
     my($requete,$nom_table) = @_;
-    print "Quel nom voulez-vous donner à votre fichier ?";
+    print "Quel nom voulez-vous donner à votre fichier ?\n";
     my $nom_fichier = <>;
     my $table = "tableHotel";
-    open (FICHIER, "> $nom_fichier ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
+    open (FICHIER, "> $nom_fichier.html ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
     print FICHIER "<!DOCTYPE html> \n
     <html><head>
     <meta http-equiv='content-type' content='text/html; charset=windows-1252'>
@@ -181,13 +187,20 @@ sub interrogation {
     if ($rep == 2){
         print "Le nombre de gérants est de : \n";
         Affiche_interr("SELECT COUNT(DISTINCT gerant)  FROM tablehotel");
-        print "Voulez-vous sauvegarder ?";
-        save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants :");
+        print "Voulez-vous sauvegarder ? (O/N)\n";
+        chomp(my $ans=<>);
+        if($ans eq "O"){
+            save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants :");
+        }
+
     } if ($rep == 3){
         print "Les gérants qui gérent au moins deux hotels sont : \n";
         Affiche_interr("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
-        print "Voulez-vous sauvegarder ?";
-        save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gèrent au moins deux Hôtels :");
+        print "Voulez-vous sauvegarder ? (O/N)\n";
+        chomp(my $ans=<>);
+        if($ans eq "O"){
+            save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gerent au moins deux Hotels :");
+        }
     }if ($rep == 4){
         print"Entrez une date de debut de reservation (JJ/MM/AAAA)\n";
         chomp(my $dated=<>);#Demande la date a l'utilisateur
@@ -207,7 +220,7 @@ sub interrogation {
         $newDated=$newDated->dmy('/');#Permet d'avoir la date sous le format JJ/MM/AAAA
         $newDatef=$newDatef->dmy('/');
         print "Les hotels qui ont au moins une chambre de libre sont : \n";
-        Affiche_interr("SELECT hotel FROM reservation WHERE ('$newDated' < debutresa AND '$newDatef' <debutresa) OR ('$newDated'>finresa AND '$newDatef'>finresa)");
+        Affiche_interr("SELECT hotel FROM reservation WHERE ('$newDated' < debutresa AND '$newDatef' <debutresa) OR ('$newDated'>finresa AND '$newDatef'>finresa) GROUP BY hotel");
     }
 }
 # =================================================
@@ -226,7 +239,7 @@ sub ajouter_chambre{
         print "$hotel \n";
         }
     my $rep_hotel = <>;
-    print "Quel est le numéro de la chambre ?";
+    print "Quel est le numéro de la chambre ?\n";
     my $rep_numChambre = <>;
     print "Quel est le type de couchage ? (Simple/Double) \n";
     my $rep_couchage = <>;
@@ -240,7 +253,6 @@ sub ajouter_chambre{
 
 }
 #Fonction qui permet de modifier le gérant.
-#Fonction qui permet de modifier le gérant.
 sub modifier_gerant{
   print "Quel gerant voulez vous modifier ?\n";
   Affiche_interr("SELECT gerant,hotel  FROM tablehotel\n");
@@ -253,9 +265,45 @@ sub modifier_gerant{
 
 }
 #Fonction qui permet d'annuler une reservation.
-# sub annuler_resa{
-#
-# }
+sub annuler_resa{
+    print"Quel est votre numero de reservation ?\n";
+    my $numresa=<>;
+    print"Entrez la date d'aujourd'hui !(JJ/MM/AAAA)\n";
+    my $today=<>;
+
+    my $requete1 = "SELECT debutresa FROM reservation WHERE numresa='$numresa'";
+    my $prep1 = $dbh->prepare($requete1);
+    $prep1->execute;
+    my $debutresa = $prep1->fetchrow_array;
+
+    chomp($today);
+    chomp($debutresa);
+    my @convdatef=split("/",$today);
+
+    my $newDatef = DateTime->new (day => $convdatef[0],
+                                  month => $convdatef[1],
+                                  year => $convdatef[2]
+                                  );
+    my @convdated=split("/",$debutresa);#Split l'entrée de l'utilisateur via '/' et les mets dans des listes
+    my $newDated = DateTime->new (day => $convdated[0],
+                                  month => $convdated[1],
+                                  year => $convdated[2]
+                                  );
+
+    my $duration = $newDated-$newDatef;
+    # my $duration = $debutresa->Delta_Days($newDatef);
+    # print $duration->delta_days;
+    my $dur=$duration->delta_days;
+    if($dur>=2){
+        my $requete="DELETE FROM reservation WHERE '$numresa'==numresa";
+        my $prep=$dbh->prepare($requete1);
+        $prep->execute;
+     }else{
+         print"Impossible";
+     }
+
+
+}
 #Fonction qui permet de rajouter un reservation.
 sub ajouter_resa{
     my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
@@ -275,6 +323,8 @@ sub ajouter_resa{
     my $fin = <>;
     print "Quel est votre nom ?  \n";
     my $nom = <>;
+    print "Quel est votre numero ?  \n";
+    my $numero = <>;
 
     $requete="SELECT MAX(numresa) FROM reservation";
     $prep= $dbh->prepare($requete);
@@ -283,6 +333,8 @@ sub ajouter_resa{
     $numresa=$numresa+1;
     my $insert_resa = $dbh->prepare("INSERT INTO reservation VALUES(?,?,?,?,?,?)");
     $insert_resa->execute($numresa,$debut,$fin,$numchambre,$hotel,$nom);#Insertion dans la table de la nouvelle chambre
+    my $insert_client = $dbh->prepare("INSERT INTO client VALUES(?,?)");
+    $insert_client->execute($nom,$numero);#Insertion dans la table de la nouvelle chambre
 
 }
 # ===========================================
@@ -322,7 +374,9 @@ sub hotel_taux {
         }
         while (my($dateCount) = $prep2->fetchrow_array ) {
             $taux = ($dateCount / $lineCount)*100;#Calcul du taux de reservation.
+
         }
+
     }
     return $taux;
 }
@@ -339,6 +393,7 @@ sub tout_hotel_taux {
         my $taux = hotel_taux($today,$weekEarly,$h);
         if($option == 2){#Si on veux le taux pour tous les hotels
             print "$h -> $taux% \n";
+
     }elsif($option == 3){#Ou afficher celui qui a le plus haut taux
             if($taux > $max) {
                 $max = $taux;
@@ -394,15 +449,12 @@ sub maj{
     }
     if ($rep == 2){
       modifier_gerant();
-
     }
     if ($rep == 3){
-
+        annuler_resa();
     }
     if ($rep == 4){
         ajouter_resa();
-
-
     }
 }
 
@@ -421,7 +473,10 @@ sub stats{
     my $option = <>;
     print "Quelle date date de référence ? (JJ/02/2018)\n";
     chomp(my $date = <>);
+    # print "\$date = $date";
     my($today,$weekEarly) = dateCacl($date);
+    # print "\$today = $today \n";
+    # print "\$weekEarly = $weekEarly \n";
 
         my $taux;
         my $h;
