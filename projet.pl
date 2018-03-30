@@ -290,7 +290,7 @@ sub ajouter_resa{
 
 # ==================STATISTIQUES=============
 
-sub dateCacl {
+sub dateConvert {
 
 my($date) = @_;
 my @convDate = split("/",$date);
@@ -332,6 +332,7 @@ sub tout_hotel_taux {
     my($today,$weekEarly,$option) = @_;
     my $max = -1;
     my $hotel;
+    my %dataStat;
     my $requete1 = qq(SELECT hotel  FROM tablehotel);
     my $prep1 = $dbh->prepare($requete1);
     $prep1->execute;
@@ -339,15 +340,36 @@ sub tout_hotel_taux {
         my $taux = hotel_taux($today,$weekEarly,$h);
         if($option == 2){#Si on veux le taux pour tous les hotels
             print "$h -> $taux% \n";
+            $data{$h} = $taux;
     }elsif($option == 3){#Ou afficher celui qui a le plus haut taux
             if($taux > $max) {
                 $max = $taux;
                 $hotel = $h;
             }
-        }
+        }   
     }
-    if($option == 3){
+    if($option = 2) {
+        print "Voulez-vous sauvegarder ?";
+        statTable(%dataStat);
+        save_html("SELECT * FROM tauxHotel", "Taux d'occupations :");
+    }
+    }elsif($option == 3){
         print "Meilleure taux d'occupation : $hotel -> $max% \n";
+    }
+}
+
+sub statTable { # creation d'une table avec chaque taux de chaque hotel
+    my(%dataStat) = @_;
+    $dbh -> do ("drop table if exists tauxHotel");
+    my $table = $dbh->prepare("
+    create table TableHotel(
+        Hotel text PRIMARY KEY,
+        Taux float);");
+    $table -> execute;
+    foreach my $x (keys(%dataStat)) {
+        my $requete = prepare -> qq(INSERT INTO tauxHotel 
+        VALUES (?,?));
+        $requete -> execute($x,$dataStat{$x});
     }
 }
 
@@ -421,7 +443,7 @@ sub stats{
     my $option = <>;
     print "Quelle date date de référence ? (JJ/02/2018)\n";
     chomp(my $date = <>);
-    my($today,$weekEarly) = dateCacl($date);
+    my($today,$weekEarly) = dateConvert($date);
 
         my $taux;
         my $h;
