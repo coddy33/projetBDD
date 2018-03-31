@@ -2,8 +2,10 @@
 use strict; # A REMETTRE !!!!!!!!!!!!!!!!!!!
 use warnings;
 use Data::Dumper;
+use Time::HiRes qw( time );
 
 sub test_Perl { # Fonction avec 3 paramètres : nom du fichier, 2 numéros de colonnes distinctes
+    my $begin = time;
     my($file,$column1,$column2) = @_;
     my $test = 1;
     my %table;
@@ -22,6 +24,8 @@ sub test_Perl { # Fonction avec 3 paramètres : nom du fichier, 2 numéros de co
         my $size = keys %{$table{$x}};
         print "$x -> $size\n";
     }
+    my $end = time;
+    print "Time spent : ", in$end - $begin," ms\n"; 
     #print Dumper(\%table);
 }
 
@@ -30,11 +34,11 @@ sub test_Perl { # Fonction avec 3 paramètres : nom du fichier, 2 numéros de co
 my $file = "Hotels1.csv";
 print "Nombre de chambres :\n";
 test_Perl($file,0,3); # nombre de chambre par hotel
-print "\nNombre de réservations :\n";
-test_Perl($file,0,7); # nombre de réservation par hotel
-print "\nNombre de client :\n";
-test_Perl($file,0,10);# nombre de clients par hotel
-print "\nNombre d'hotel par nombre d'étoiles :\n";
-test_Perl($file,2,0);# nombre d'hôtel par nombre d'étoile
-print "\nNombre d'hotel par gérant :\n";
-test_Perl($file,1,0);# nombre d'hôtel par gérants
+# print "\nNombre de réservations :\n";
+# test_Perl($file,0,7); # nombre de réservation par hotel
+# print "\nNombre de client :\n";
+# test_Perl($file,0,10);# nombre de clients par hotel
+# print "\nNombre d'hotel par nombre d'étoiles :\n";
+# test_Perl($file,2,0);# nombre d'hôtel par nombre d'étoile
+# print "\nNombre d'hotel par gérant :\n";
+# test_Perl($file,1,0);# nombre d'hôtel par gérants
