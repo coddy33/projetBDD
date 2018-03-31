@@ -369,7 +369,7 @@ sub statTable { # creation d'une table avec chaque taux de chaque hotel
     foreach my $x (keys(%dataStat)) {
         my $requete = prepare -> qq(INSERT INTO tauxHotel 
         VALUES (?,?));
-        $requete -> execute($x,$dataStat{$x});
+        $requete -> execute($x,int($dataStat{$x}));
     }
 }
 
