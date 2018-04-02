@@ -1,9 +1,13 @@
 #!/bin/env perl
-#use strict; # A REMETTRE !!!!!!!!!!!!!!!!!!!
+use strict; # A REMETTRE !!!!!!!!!!!!!!!!!!!
 use warnings;
 use DBI;
 use DateTime;
 use POSIX qw(strftime);
+use Date::Calc qw(Delta_Days);
+use Data::Dumper;
+use DateTime::Duration;
+use DateTime::Format::Strptime;
 
 my $file = "Hotels1.csv";#Chargement du CSV, qui permet l'initialisation de la table si elle n'existe pas.
 my $dbh = DBI -> connect("DBI:Pg:dbname=mbodet911e;host=dbserver","mbodet911e","idiot21",{'RaiseError' => 1});#Connection a la base
@@ -253,9 +257,45 @@ sub modifier_gerant{
 
 }
 #Fonction qui permet d'annuler une reservation.
-# sub annuler_resa{
-#
-# }
+sub annuler_resa{
+    print"Quel est votre numero de reservation ?\n";
+    my $numresa=<>;
+    print"Entrez la date d'aujourd'hui !(JJ/MM/AAAA)\n";
+    my $today=<>;
+
+    my $requete1 = "SELECT debutresa FROM reservation WHERE numresa='$numresa'";
+    my $prep1 = $dbh->prepare($requete1);
+    $prep1->execute;
+    my $debutresa = $prep1->fetchrow_array;
+
+    chomp($today);
+    chomp($debutresa);
+    my @convdatef=split("/",$today);
+
+    my $newDatef = DateTime->new (day => $convdatef[0],
+                                  month => $convdatef[1],
+                                  year => $convdatef[2]
+                                  );
+    my @convdated=split("/",$debutresa);#Split l'entrée de l'utilisateur via '/' et les mets dans des listes
+    my $newDated = DateTime->new (day => $convdated[0],
+                                  month => $convdated[1],
+                                  year => $convdated[2]
+                                  );
+
+    my $duration = $newDated-$newDatef;
+    # my $duration = $debutresa->Delta_Days($newDatef);
+    # print $duration->delta_days;
+    my $dur=$duration->delta_days;
+    if($dur>=2){
+        my $requete="DELETE FROM reservation WHERE '$numresa'==numresa";
+        my $prep=$dbh->prepare($requete1);
+        $prep->execute;
+     }else{
+         print"Impossible";
+     }
+
+
+}
 #Fonction qui permet de rajouter un reservation.
 sub ajouter_resa{
     my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
@@ -275,6 +315,8 @@ sub ajouter_resa{
     my $fin = <>;
     print "Quel est votre nom ?  \n";
     my $nom = <>;
+    print "Quel est votre numero ?  \n";
+    my $numero = <>;
 
     $requete="SELECT MAX(numresa) FROM reservation";
     $prep= $dbh->prepare($requete);
@@ -283,6 +325,8 @@ sub ajouter_resa{
     $numresa=$numresa+1;
     my $insert_resa = $dbh->prepare("INSERT INTO reservation VALUES(?,?,?,?,?,?)");
     $insert_resa->execute($numresa,$debut,$fin,$numchambre,$hotel,$nom);#Insertion dans la table de la nouvelle chambre
+    my $insert_client = $dbh->prepare("INSERT INTO client VALUES(?,?)");
+    $insert_client->execute($nom,$numero);#Insertion dans la table de la nouvelle chambre
 
 }
 # ===========================================
@@ -340,19 +384,19 @@ sub tout_hotel_taux {
         my $taux = hotel_taux($today,$weekEarly,$h);
         if($option == 2){#Si on veux le taux pour tous les hotels
             print "$h -> $taux% \n";
-            $data{$h} = $taux;
-    }elsif($option == 3){#Ou afficher celui qui a le plus haut taux
+            $dataStat{$h} = $taux;
+        }elsif($option == 3){#Ou afficher celui qui a le plus haut taux
             if($taux > $max) {
                 $max = $taux;
                 $hotel = $h;
             }
-        }   
-    }
-    if($option = 2) {
+        }
+  }
+    if($option == 2) {
         print "Voulez-vous sauvegarder ?";
         statTable(%dataStat);
         save_html("SELECT * FROM tauxHotel", "Taux d'occupations :");
-    }
+
     }elsif($option == 3){
         print "Meilleure taux d'occupation : $hotel -> $max% \n";
     }
@@ -367,8 +411,7 @@ sub statTable { # creation d'une table avec chaque taux de chaque hotel
         Taux float);");
     $table -> execute;
     foreach my $x (keys(%dataStat)) {
-        my $requete = prepare -> qq(INSERT INTO tauxHotel 
-        VALUES (?,?));
+        my $requete = $dbh->prepare (qq(INSERT INTO tauxHotel VALUES (?,?)));
         $requete -> execute($x,int($dataStat{$x}));
     }
 }
@@ -416,15 +459,12 @@ sub maj{
     }
     if ($rep == 2){
       modifier_gerant();
-
     }
     if ($rep == 3){
-
+        annuler_resa();
     }
     if ($rep == 4){
         ajouter_resa();
-
-
     }
 }
 
