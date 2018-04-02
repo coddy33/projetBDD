@@ -24,7 +24,6 @@ sub initialisation{
     my $sth = $dbh->prepare("
 
     create table initTable(
-
     Hotel text,
     Gerant text,
     Etoiles integer,
@@ -81,7 +80,7 @@ sub initialisation{
 
     #Remplissage de la table.
     my $initHotel = $dbh->prepare("
-    ALTER DATABASE TableHotel SET DateStyle=iso, dmy;
+
     INSERT into TableHotel(
     SELECT hotel, gerant, etoiles
     FROM inittable
@@ -89,7 +88,6 @@ sub initialisation{
     ");
 
     my $initResa = $dbh->prepare("
-    ALTER DATABASE Reservation SET DateStyle=iso, dmy;
     INSERT INTO Reservation(
     SELECT NumResa, DebutResa, FinResa, NumChambre, Hotel, NomClient
     FROM InitTable
@@ -97,7 +95,6 @@ sub initialisation{
     ");
 
     my $initClient = $dbh->prepare("
-    ALTER DATABASE Client SET DateStyle=iso, dmy;
     INSERT INTO Client(
     SELECT NomClient, PhoneClient
     FROM InitTable
@@ -105,7 +102,6 @@ sub initialisation{
     ");
 
     my $initChambre = $dbh->prepare("
-    ALTER DATABASE Chambre SET DateStyle=iso, dmy;
     INSERT INTO Chambre(
     SELECT NumChambre, Hotel, TypeCouchage, PrixBasseSaison, PrixHauteSaison
     FROM InitTable
@@ -120,6 +116,7 @@ sub initialisation{
     close(HOTEL);#Fermeture du fichier CSV
 
 } #Fin de la fonction initialisation
+
 
 # ============================SAUVEGARDER DANS UN FICHIER================
 sub save_html{
