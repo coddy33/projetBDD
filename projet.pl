@@ -5,9 +5,7 @@ use DBI;
 use DateTime;
 use POSIX qw(strftime);
 use Date::Calc qw(Delta_Days);
-
 use Data::Dumper;
-
 use DateTime::Duration;
 use DateTime::Format::Strptime;
 
@@ -131,10 +129,10 @@ sub save_html{
     #   -$nom_table : deuxieme argument, donner le nom de la table
     #
     my($requete,$nom_table) = @_;
-    print "Quel nom voulez-vous donner à votre fichier ?\n";
+    print "Quel nom voulez-vous donner à votre fichier ?";
     my $nom_fichier = <>;
     my $table = "tableHotel";
-    open (FICHIER, "> $nom_fichier.html ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
+    open (FICHIER, "> $nom_fichier ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
     print FICHIER "<!DOCTYPE html> \n
     <html><head>
     <meta http-equiv='content-type' content='text/html; charset=windows-1252'>
@@ -187,20 +185,13 @@ sub interrogation {
     if ($rep == 2){
         print "Le nombre de gérants est de : \n";
         Affiche_interr("SELECT COUNT(DISTINCT gerant)  FROM tablehotel");
-        print "Voulez-vous sauvegarder ? (O/N)\n";
-        chomp(my $ans=<>);
-        if($ans eq "O"){
-            save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants :");
-        }
-
+        print "Voulez-vous sauvegarder ?";
+        save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants :");
     } if ($rep == 3){
         print "Les gérants qui gérent au moins deux hotels sont : \n";
         Affiche_interr("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
-        print "Voulez-vous sauvegarder ? (O/N)\n";
-        chomp(my $ans=<>);
-        if($ans eq "O"){
-            save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gerent au moins deux Hotels :");
-        }
+        print "Voulez-vous sauvegarder ?";
+        save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gèrent au moins deux Hôtels :");
     }if ($rep == 4){
         print"Entrez une date de debut de reservation (JJ/MM/AAAA)\n";
         chomp(my $dated=<>);#Demande la date a l'utilisateur
@@ -220,7 +211,7 @@ sub interrogation {
         $newDated=$newDated->dmy('/');#Permet d'avoir la date sous le format JJ/MM/AAAA
         $newDatef=$newDatef->dmy('/');
         print "Les hotels qui ont au moins une chambre de libre sont : \n";
-        Affiche_interr("SELECT hotel FROM reservation WHERE ('$newDated' < debutresa AND '$newDatef' <debutresa) OR ('$newDated'>finresa AND '$newDatef'>finresa) GROUP BY hotel");
+        Affiche_interr("SELECT hotel FROM reservation WHERE ('$newDated' < debutresa AND '$newDatef' <debutresa) OR ('$newDated'>finresa AND '$newDatef'>finresa)");
     }
 }
 # =================================================
@@ -239,7 +230,7 @@ sub ajouter_chambre{
         print "$hotel \n";
         }
     my $rep_hotel = <>;
-    print "Quel est le numéro de la chambre ?\n";
+    print "Quel est le numéro de la chambre ?";
     my $rep_numChambre = <>;
     print "Quel est le type de couchage ? (Simple/Double) \n";
     my $rep_couchage = <>;
@@ -252,6 +243,7 @@ sub ajouter_chambre{
     $insert_chambre->execute($rep_numChambre,$rep_hotel,$rep_couchage,$rep_basseSaison,$rep_hauteSaison);#Insertion dans la table de la nouvelle chambre
 
 }
+#Fonction qui permet de modifier le gérant.
 #Fonction qui permet de modifier le gérant.
 sub modifier_gerant{
   print "Quel gerant voulez vous modifier ?\n";
@@ -342,7 +334,7 @@ sub ajouter_resa{
 
 # ==================STATISTIQUES=============
 
-sub dateCacl {
+sub dateConvert {
 
 my($date) = @_;
 my @convDate = split("/",$date);
@@ -374,9 +366,7 @@ sub hotel_taux {
         }
         while (my($dateCount) = $prep2->fetchrow_array ) {
             $taux = ($dateCount / $lineCount)*100;#Calcul du taux de reservation.
-
         }
-
     }
     return $taux;
 }
@@ -386,6 +376,7 @@ sub tout_hotel_taux {
     my($today,$weekEarly,$option) = @_;
     my $max = -1;
     my $hotel;
+    my %dataStat;
     my $requete1 = qq(SELECT hotel  FROM tablehotel);
     my $prep1 = $dbh->prepare($requete1);
     $prep1->execute;
@@ -393,16 +384,35 @@ sub tout_hotel_taux {
         my $taux = hotel_taux($today,$weekEarly,$h);
         if($option == 2){#Si on veux le taux pour tous les hotels
             print "$h -> $taux% \n";
-
-    }elsif($option == 3){#Ou afficher celui qui a le plus haut taux
+            $dataStat{$h} = $taux;
+        }elsif($option == 3){#Ou afficher celui qui a le plus haut taux
             if($taux > $max) {
                 $max = $taux;
                 $hotel = $h;
             }
         }
-    }
-    if($option == 3){
+  }
+    if($option == 2) {
+        print "Voulez-vous sauvegarder ?";
+        statTable(%dataStat);
+        save_html("SELECT * FROM tauxHotel", "Taux d'occupations :");
+
+    }elsif($option == 3){
         print "Meilleure taux d'occupation : $hotel -> $max% \n";
+    }
+}
+
+sub statTable { # creation d'une table avec chaque taux de chaque hotel
+    my(%dataStat) = @_;
+    $dbh -> do ("drop table if exists tauxHotel");
+    my $table = $dbh->prepare("
+    create table TableHotel(
+        Hotel text PRIMARY KEY,
+        Taux float);");
+    $table -> execute;
+    foreach my $x (keys(%dataStat)) {
+        my $requete = $dbh->prepare (qq(INSERT INTO tauxHotel VALUES (?,?)));
+        $requete -> execute($x,int($dataStat{$x}));
     }
 }
 
@@ -473,10 +483,7 @@ sub stats{
     my $option = <>;
     print "Quelle date date de référence ? (JJ/02/2018)\n";
     chomp(my $date = <>);
-    # print "\$date = $date";
-    my($today,$weekEarly) = dateCacl($date);
-    # print "\$today = $today \n";
-    # print "\$weekEarly = $weekEarly \n";
+    my($today,$weekEarly) = dateConvert($date);
 
         my $taux;
         my $h;
