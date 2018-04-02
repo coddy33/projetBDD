@@ -32,8 +32,8 @@ sub initialisation{
     PrixBasseSaison integer,
     PrixHauteSaison integer,
     NumResa integer,
-    DebutResa text,
-    FinResa text,
+    DebutResa date,
+    FinResa date,
     NomClient text,
     PhoneClient text);
 
@@ -44,8 +44,8 @@ sub initialisation{
 
     CREATE TABLE Reservation(
     NumResa integer PRIMARY KEY,
-    DebutResa text,
-    FinResa text,
+    DebutResa date,
+    FinResa date,
     NumChambre integer,
     Hotel text,
     NomClient text);
@@ -116,6 +116,7 @@ sub initialisation{
     close(HOTEL);#Fermeture du fichier CSV
 
 } #Fin de la fonction initialisation
+
 
 # ============================SAUVEGARDER DANS UN FICHIER================
 sub save_html{
@@ -244,7 +245,6 @@ sub ajouter_chambre{
 
 }
 #Fonction qui permet de modifier le gérant.
-#Fonction qui permet de modifier le gérant.
 sub modifier_gerant{
   print "Quel gerant voulez vous modifier ?\n";
   Affiche_interr("SELECT gerant,hotel  FROM tablehotel\n");
@@ -258,12 +258,17 @@ sub modifier_gerant{
 }
 #Fonction qui permet d'annuler une reservation.
 sub annuler_resa{
+    print"Quel est votre nom ?\n";
+    chomp(my $nom=<>);
+
+    Affiche_interr("SELECT numresa,debutresa,finresa FROM reservation WHERE nomclient='$nom' AND numresa>0" );#WHERE nomclient='$nom'");
     print"Quel est votre numero de reservation ?\n";
     my $numresa=<>;
     print"Entrez la date d'aujourd'hui !(JJ/MM/AAAA)\n";
     my $today=<>;
 
     my $requete1 = "SELECT debutresa FROM reservation WHERE numresa='$numresa'";
+    # my $requete1 = "SELECT debutresa FROM reservation WHERE nomclient='$nom'";
     my $prep1 = $dbh->prepare($requete1);
     $prep1->execute;
     my $debutresa = $prep1->fetchrow_array;
@@ -291,35 +296,77 @@ sub annuler_resa{
         my $prep=$dbh->prepare($requete1);
         $prep->execute;
      }else{
-         print"Impossible";
+         print"Impossible, vous ne pouvez pas annuler uen reservation moins de deux jours avant le debut\n";
      }
 
 
 }
 #Fonction qui permet de rajouter un reservation.
 sub ajouter_resa{
-    my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
+    Affiche_interr("SELECT hotel FROM reservation GROUP BY hotel");
+    print "Dans quel hotel voulez vous reserver ?\n";
+    chomp(my $hotel = <>);
+
+    print "Quelle est votre date d'arrivée ?\n";
+    chomp(my$debut = <>);
+    print "Quelle est votre date de départ ?  \n";
+    chomp(my$fin = <>);
+
+
+
+    my $requete = "SELECT numchambre FROM reservation WHERE hotel='$hotel'";
     my $prep = $dbh->prepare($requete);
     $prep->execute;
-
-        while (my($hotel) = $prep->fetchrow_array ){
-        print "$hotel \n";
-        }
-    print "Dans quel hotel voulez vous reserver ?\n";
-    my $hotel = <>;
-    print "Quel est le numéro de la chambre ?\n";
+    # my cpt=0;
+    print "La liste des chambres est : \n";
+        while (my($chambre) = $prep->fetchrow_array ){
+         print "$chambre \n";
+         }
+    print "Quel est le numéro de la chambre vide est:\n";
     my $numchambre = <>;
-    print "Quelle est votre date d'arrivée ?\n";
-    my $debut = <>;
-    print "Quelle est votre date de départ ?  \n";
-    my $fin = <>;
+
+    $prep = $dbh->prepare($requete);
+    $prep->execute;
+    my @convdated=split("/",$debut);
+
+    my $newDated = DateTime->new (day => $convdated[0],
+                                  month => $convdated[1],
+                                  year => $convdated[2]
+                                  );
+    my @convdatef=split("/",$fin);#Split l'entrée de l'utilisateur via '/' et les mets dans des listes
+    my $newDatef = DateTime->new (day => $convdatef[0],
+                                  month => $convdatef[1],
+                                  year => $convdatef[2]
+                                  );
+
+
+    $requete = "SELECT numresa FROM reservation WHERE
+
+    ((debutresa >'$newDated'  AND debutresa>'$newDatef')
+    OR(finresa<'$newDated' AND finresa<'$newDatef' )
+    )";
+
+    # ((10/12/1995 >'$newDated'  AND 10/12/1995>'$newDatef')
+    # OR(17/12/1995<'$newDated AND 17/12/1995<'$newDatef' )
+    # )";
+
+    $prep = $dbh->prepare($requete);
+    $prep->execute;
+    my (@Tid);
+    while (my($id) = $prep->fetchrow_array ){
+        push @Tid,$id;
+        print"$id\n";
+        }
+
+
     print "Quel est votre nom ?  \n";
     my $nom = <>;
+
     print "Quel est votre numero ?  \n";
     my $numero = <>;
 
-    $requete="SELECT MAX(numresa) FROM reservation";
-    $prep= $dbh->prepare($requete);
+    my $requete="SELECT MAX(numresa) FROM reservation";
+    my $prep= $dbh->prepare($requete);
     $prep->execute;
     my $numresa = $prep->fetchrow_array();
     $numresa=$numresa+1;
