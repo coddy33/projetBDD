@@ -454,8 +454,8 @@ sub statTable { # creation d'une table avec chaque taux de chaque hotel
     $dbh -> do ("drop table if exists tauxHotel");
     my $table = $dbh->prepare("
     create table tauxHotel(
-        Hotel text PRIMARY KEY,
-        Taux float);");
+        Hotel text,
+        Taux float(24));");
     $table -> execute;
     foreach my $x (keys(%dataStat)) {
         my $requete = $dbh->prepare (qq(INSERT INTO tauxHotel VALUES (?,?)));
