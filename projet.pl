@@ -250,11 +250,15 @@ sub ajouter_chambre{
     my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
     my $prep = $dbh->prepare($requete);
     $prep->execute;
-
+    my @Thotel;
         while (my($hotel) = $prep->fetchrow_array ){
-        print "$hotel \n";
+        push(@Thotel,$hotel);
         }
-    my $rep_hotel = <>;
+    for (my $i=0 ; $i < $#Thotel ; $i++ ){
+        print "[$i] $Thotel[$i] \n";
+    }
+    my $rep_numhotel = <>;
+    my $rep_hotel = $Thotel[$rep_numhotel];
     print "Quel est le numéro de la chambre ?";
     my $rep_numChambre = <>;
     print "Quel est le type de couchage ? (Simple/Double) \n";
