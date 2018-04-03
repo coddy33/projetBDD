@@ -1,16 +1,12 @@
 #!/bin/env perl
-use strict; 
+use strict;
 use warnings;
 use DBI;
 use DateTime;
-use POSIX qw(strftime);
-use Date::Calc qw(Delta_Days);
-use Data::Dumper;
-use DateTime::Duration;
-use DateTime::Format::Strptime;
 
 my $file = "Hotels1.csv";#Chargement du CSV, qui permet l'initialisation de la table si elle n'existe pas.
 my $dbh = DBI -> connect("DBI:Pg:dbname=mbodet911e;host=dbserver","mbodet911e","idiot21",{'RaiseError' => 1});#Connection a la base
+$dbh-> do( "SET datestyle = ISO, DMY" );#Permet de definir le type d'heure (dd/mm/aaaa)
 
 sub initialisation{
     #Teste l'existance de la table, et si existe, on n'ecrase pas avec les donnée du CSV.
@@ -130,7 +126,7 @@ sub save_html{
     #   -$nom_table : deuxieme argument, donner le nom de la table
     #
     my($requete,$nom_table) = @_;
-    print "Quel nom voulez-vous donner à votre fichier ?";
+    print "Quel nom voulez-vous donner à votre fichier ?\n";
     my $nom_fichier = <>;
     my $table = "tableHotel";
     open (FICHIER, "> $nom_fichier ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
@@ -162,7 +158,6 @@ sub save_html{
 }
 
 # =========================GERSTION D'ERREUR========================
-
 sub gestion_erreur_date{
     while(1){
         chomp(my$date = <>);
@@ -177,7 +172,6 @@ sub gestion_erreur_date{
         }
     }
 }
-
 # =========================FIN GERSTION D'ERREUR========================
 
 
@@ -195,7 +189,6 @@ sub Affiche_interr{
     }
 }
 
-
 sub interrogation {
     my $rep = <>;
 
@@ -208,35 +201,28 @@ sub interrogation {
         rafraichir_ecran();
         print "Le nombre de gérants est de : \n";
         Affiche_interr("SELECT COUNT(DISTINCT gerant)  FROM tablehotel");
-        print "Voulez-vous sauvegarder ?";
-        save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants :");
+        print "Voulez-vous sauvegarder ? (o/n)\n";
+        chomp(my $save=<>);
+        if($save eq "o"){
+            save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants :");
+        }
     } if ($rep == 3){
         rafraichir_ecran();
         print "Les gérants qui gérent au moins deux hotels sont : \n";
         Affiche_interr("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
-        print "Voulez-vous sauvegarder ?";
-        save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gèrent au moins deux Hôtels :");
+        print "Voulez-vous sauvegarder ?(o/n)\n";
+        chomp(my $save=<>);
+        if($save eq "o"){
+            save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gèrent au moins deux Hôtels :");
+        }
     }if ($rep == 4){
         rafraichir_ecran();
         print"Entrez une date de debut de reservation (JJ/MM/AAAA)\n";
-        chomp(my $dated=<>);#Demande la date a l'utilisateur
-        my @convdated=split("/",$dated);#Split l'entrée de l'utilisateur via '/' et les mets dans des listes
-        my $newDated = DateTime->new (day => $convdated[0],
-                                      month => $convdated[1],
-                                      year => $convdated[2]
-                                      );
+        chomp(my $dated=gestion_erreur_date());#Demande la date a l'utilisateur
         print"Entrez une date de fin de reservation\n";
-        chomp(my $datef=<>);
-        my @convdatef=split("/",$datef);
-        my $newDatef = DateTime->new (day => $convdatef[0],
-                                      month => $convdatef[1],
-                                      year => $convdatef[2]
-                                      );
-
-        $newDated=$newDated->ymd('/');#Permet d'avoir la date sous le format JJ/MM/AAAA
-        $newDatef=$newDatef->ymd('/');
+        chomp(my $datef=gestion_erreur_date());
         print "Les hotels qui ont au moins une chambre de libre sont : \n";
-        Affiche_interr("SELECT hotel FROM reservation WHERE ('$newDated' < debutresa AND '$newDatef' <debutresa) OR ('$newDated'>finresa AND '$newDatef'>finresa) GROUP BY hotel");
+        Affiche_interr("SELECT hotel FROM reservation WHERE( (TO_DATE('$dated','DD/MM/YYYY')<debutresa AND TO_DATE('$datef','DD/MM/YYYY')<debutresa) OR (TO_DATE('$dated','DD/MM/YYYY')>finresa AND TO_DATE('$datef','DD/MM/YYYY')>finresa) ) GROUP BY hotel");
     }
 }
 # =================================================
@@ -259,7 +245,7 @@ sub ajouter_chambre{
     }
     my $rep_numhotel = <>;
     my $rep_hotel = $Thotel[$rep_numhotel];
-    print "Quel est le numéro de la chambre ?";
+    print "Quel est le numéro de la chambre ?\n";
     my $rep_numChambre = <>;
     print "Quel est le type de couchage ? (Simple/Double) \n";
     my $rep_couchage = <>;
@@ -291,69 +277,37 @@ sub annuler_resa{
 
     Affiche_interr("SELECT numresa,debutresa,finresa FROM reservation WHERE nomclient='$nom' AND numresa>0" );#WHERE nomclient='$nom'");
     print"Quel est votre numero de reservation ?\n";
-    my $numresa=<>;
-    print"Entrez la date d'aujourd'hui !(JJ/MM/AAAA)\n";
-    my $today=gestion_erreur_date();
-    print "============ hello";
-    my $requete1 = "SELECT debutresa FROM reservation WHERE numresa='$numresa'";
-    # my $requete1 = "SELECT debutresa FROM reservation WHERE nomclient='$nom'";
-    my $prep1 = $dbh->prepare($requete1);
-    $prep1->execute;
-    my $debutresa = $prep1->fetchrow_array;
-    chomp($today);
-    chomp($debutresa);
-    my @convdatef=split("/",$today);
-print"0 === $convdatef[0]\n";
-print"1 === $convdatef[1]\n";
-print"2 === $convdatef[2]\n";
-    my $newDatef = DateTime->new (day => $convdatef[0],
-                                  month => $convdatef[1],
-                                  year => $convdatef[2]
-                                  );
-    my @convdated=split("/",$debutresa);#Split l'entrée de l'utilisateur via '/' et les mets dans des listes
-    my $newDated = DateTime->new (day => $convdated[0],
-                                  month => $convdated[1],
-                                  year => $convdated[2]
-                                  );
+    chomp(my $numresa=<>);
 
-    my $duration = $newDated-$newDatef;
-    # my $duration = $debutresa->Delta_Days($newDatef);
-    # print $duration->delta_days;
-    my $dur=$duration->delta_days;
-    if($dur>=2){
-        my $requete="DELETE FROM reservation WHERE '$numresa'==numresa";
-        my $prep=$dbh->prepare($requete1);
+        my $requete="DELETE FROM reservation WHERE debutresa > CURRENT_DATE+2 AND numresa = '$numresa'";
+        my $prep=$dbh->prepare($requete);
         $prep->execute;
-     }else{
-         print"Impossible, vous ne pouvez pas annuler uen reservation moins de deux jours avant le debut\n";
-     }
-
 
 }
 #Fonction qui permet de rajouter un reservation.
 sub ajouter_resa{
-    Affiche_interr("SELECT hotel FROM reservation GROUP BY hotel");
+    my $requete = "SELECT hotel FROM reservation GROUP BY hotel";
+    my $prep = $dbh->prepare($requete);
+    $prep->execute;
     print "Dans quel hotel voulez vous reserver ?\n";
-    chomp(my $hotel = <>);
+    my @Thotel;
+    while (my($h) = $prep->fetchrow_array ){
+        push(@Thotel,$h);
+    }
+    for (my $i=0 ; $i < $#Thotel ; $i++ ){
+        print "[$i] $Thotel[$i] \n";
+    }
+    my $rep_numhotel = <>;
+    my $hotel = $Thotel[$rep_numhotel];
+    chomp($hotel);
     print "Quelle est votre date d'arrivée ?\n";
     chomp(my$debut = <>);
     print "Quelle est votre date de départ ?  \n";
     chomp(my$fin = <>);
 
-    my @convdated=split("/",$debut);
-    my $newDated = DateTime->new (day => $convdated[0],
-                                  month => $convdated[1],
-                                  year => $convdated[2]
-                                  );
-    my @convdatef=split("/",$fin);#Split l'entrée de l'utilisateur via '/' et les mets dans des listes
-    my $newDatef = DateTime->new (day => $convdatef[0],
-                                  month => $convdatef[1],
-                                  year => $convdatef[2]
-                                  );
-    my $requete = "SELECT numchambre FROM reservation WHERE hotel='$hotel'AND ((debutresa >'$newDated'  AND debutresa>'$newDatef')
-    OR(finresa<'$newDated' AND finresa<'$newDatef' )
-    ) GROUP BY numchambre";
-    my $prep = $dbh->prepare($requete);
+    $requete = "SELECT numchambre FROM reservation WHERE (hotel='$hotel' AND (debutresa >TO_DATE('$debut','DD/MM/YYYY')  AND debutresa>TO_DATE('$fin','DD/MM/YYYY') )
+    OR(finresa<TO_DATE('$debut','DD/MM/YYYY') AND finresa<TO_DATE('$fin','DD/MM/YYYY') )) GROUP BY numchambre";
+    $prep = $dbh->prepare($requete);
     $prep->execute;
     print "La liste des chambres vides pour cet hotel est : \n";
         while (my($chambre) = $prep->fetchrow_array ){
@@ -361,40 +315,6 @@ sub ajouter_resa{
          }
     print "Quel est le numéro de la chambre choisie:\n";
     my $numchambre = <>;
-
-    # $prep = $dbh->prepare($requete);
-    # # $prep->execute;
-    # my @convdated=split("/",$debut);
-
-    # my $newDated = DateTime->new (day => $convdated[0],
-    #                               month => $convdated[1],
-    #                               year => $convdated[2]
-    #                               );
-    # my @convdatef=split("/",$fin);#Split l'entrée de l'utilisateur via '/' et les mets dans des listes
-    # my $newDatef = DateTime->new (day => $convdatef[0],
-    #                               month => $convdatef[1],
-    #                               year => $convdatef[2]
-    #                               );
-
-
-    # $requete = "SELECT numchambre FROM reservation WHERE
-
-    # ((debutresa >'$newDated'  AND debutresa>'$newDatef')
-    # OR(finresa<'$newDated' AND finresa<'$newDatef' )
-    # )";
-
-    # ((10/12/1995 >'$newDated'  AND 10/12/1995>'$newDatef')
-    # OR(17/12/1995<'$newDated AND 17/12/1995<'$newDatef' )
-    # )";
-
-    # $prep = $dbh->prepare($requete);
-    # $prep->execute;
-    # my (@Tid);
-    # while (my($id) = $prep->fetchrow_array ){
-    #     push @Tid,$id;
-    #     print"$id\n";
-    #     }
-
 
     print "Quel est votre nom ?  \n";
     my $nom = <>;
@@ -477,10 +397,12 @@ sub tout_hotel_taux {
         }
   }
     if($option == 2) {
-        print "Voulez-vous sauvegarder ?";
         statTable(%dataStat);
-        save_html("SELECT * FROM tauxHotel", "Taux d'occupations :");
-
+        print "Voulez-vous sauvegarder ? (o/n)\n";
+        my $rep=<>;
+        if($rep eq "o"){
+            save_html("SELECT * FROM tauxHotel", "Taux d'occupations :");
+        }
     }elsif($option == 3){
         print "Meilleure taux d'occupation : $hotel -> $max% \n";
     }
@@ -587,8 +509,7 @@ sub rafraichir_ecran{
 
 rafraichir_ecran();
 
-my $boucle = 1;
-while ($boucle == 1){
+while (1){
     menu;#Affiche le menu.
     my $rep = <>;
     if ($rep == 1){
