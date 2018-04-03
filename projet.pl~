@@ -398,7 +398,7 @@ sub hotel_taux {
     my($today,$weekEarly,$h) = @_;
 
     my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Nombre total de chambre
-    my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND debutresa <='$today' AND finresa >= '$weekEarly' GROUP BY numchambre);
+    my $requete2 = qq(SELECT COUNT(*)  FROM reservation WHERE hotel = '$h' AND to_date(debutresa,'DD/MM/YYYY') <='$today' AND to_date(finresa,'DD/MM/YYYY') >= '$weekEarly' GROUP BY numchambre);
     my $prep1 = $dbh->prepare($requete1);
     my $prep2 = $dbh->prepare($requete2);
 
@@ -453,7 +453,7 @@ sub statTable { # creation d'une table avec chaque taux de chaque hotel
     my(%dataStat) = @_;
     $dbh -> do ("drop table if exists tauxHotel");
     my $table = $dbh->prepare("
-    create table tauxHotel(
+    create table TableHotel(
         Hotel text PRIMARY KEY,
         Taux float);");
     $table -> execute;
