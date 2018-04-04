@@ -399,7 +399,7 @@ sub tout_hotel_taux {
     if($option == 2) {
         statTable(%dataStat);
         print "Voulez-vous sauvegarder ? (o/n)\n";
-        my $rep=<>;
+        chomp(my $rep=<>);
         if($rep eq "o"){
             save_html("SELECT * FROM tauxHotel", "Taux d'occupations :");
         }
