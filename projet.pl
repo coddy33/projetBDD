@@ -57,7 +57,7 @@ sub initialisation{
 
     CREATE TABLE Client(
     NomClient text UNIQUE,
-    PhoneClient text);
+    PhoneClient text UNIQUE);
 
     CREATE TABLE Chambre(
     NumChambre text,
@@ -173,7 +173,6 @@ sub save_html{
     }
     print FICHIER "</tbody></table>
     </body></html>";
-    # print FICHIER "coucou";
     close (FICHIER);
 }
 
@@ -324,7 +323,9 @@ sub modifier_gerant{
 
 }
 sub annuler_resa{
+    #
     #Fonction qui permet d'annuler une reservation.
+    #
     print"Quel est votre nom ?\n";
     chomp(my $nom=<>);
 
@@ -335,10 +336,12 @@ sub annuler_resa{
         my $requete="DELETE FROM reservation WHERE debutresa > CURRENT_DATE+2 AND numresa = '$numresa'";
         my $prep=$dbh->prepare($requete);
         $prep->execute;
-
 }
+
 sub ajouter_resa{
+    #
     #Fonction qui permet de rajouter un reservation.
+    #
     my $requete = "SELECT hotel FROM reservation GROUP BY hotel";
     my $prep = $dbh->prepare($requete);
     $prep->execute;
@@ -392,6 +395,9 @@ sub ajouter_resa{
 # ==================STATISTIQUES=============
 
 sub dateConvert {
+    #
+    #Fonction qui permet de convertir la date rentrée par l'utilisateur en object date
+    #
     my($date) = @_;
     my @convDate = split("/",$date);
     my $today = DateTime->new ( day => $convDate[0],
@@ -403,7 +409,9 @@ sub dateConvert {
 }
 
 sub hotel_taux {
-    # Date: aujourd'hui et semaine derniere.
+    #
+    #Fonction qui permet de calculer le taux d'occupation d'un hotel sur une periode de 7 jours
+    #
     my($today,$weekEarly,$h) = @_;
 
     my $requete1 = qq(SELECT COUNT(*)  FROM chambre WHERE hotel = '$h'); # Nombre total de chambre
@@ -427,7 +435,9 @@ sub hotel_taux {
     return $taux;
 }
 sub tout_hotel_taux {
-    #Taux pour tout les hotels
+    #
+    #Fonction qui permet de calculer le taux d'occupation de tout les hotels sur une periode de 7 jours
+    #
     my($today,$weekEarly,$option) = @_;
     my $max = -1;
     my $hotel;
@@ -460,7 +470,9 @@ sub tout_hotel_taux {
 }
 
 sub statTable {
+    #
     # creation d'une table avec chaque taux de chaque hotel
+    #
     my(%dataStat) = @_;
     $dbh -> do ("drop table if exists tauxHotel");
     my $table = $dbh->prepare("
@@ -473,7 +485,6 @@ sub statTable {
         $requete -> execute($x,int($dataStat{$x}));
     }
 }
-
 
 # ===================MENU===================
 
@@ -564,9 +575,8 @@ sub rafraichir_ecran{
     print "\033[0;0H";
 }
 
-rafraichir_ecran();
-
 while(1){
+    rafraichir_ecran();
     menu;#Affiche le menu.
     my $rep = test_entier();
     # my $rep = <>;
