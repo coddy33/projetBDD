@@ -1,3 +1,12 @@
+# 
+# Projet Bases de données et Perl \\ Gestion d'une chaîne d'hôtels
+#
+# BODET Martial}
+# JUNG Frédéric}
+# GONCALVES CLARO Sébastien}
+#
+#
+
 #!/bin/env perl
 use strict;
 use warnings;
@@ -170,6 +179,11 @@ sub save_html{
 
 # =========================GERSTION D'ERREUR========================
 sub gestion_erreur_date{
+    #
+    # Vérifie que la date est au bon format (JJ/MM/AAAA).
+    #
+    # Retourne la date au bon format si elle est valide.
+    #
     while(1){
         chomp(my$date = <>);
         if ($date=~ /(\d{2})\/(\d{2})\/(\d{4})/){
@@ -183,12 +197,34 @@ sub gestion_erreur_date{
         }
     }
 }
-# =========================FIN GERSTION D'ERREUR========================
+
+sub test_entier{
+    #
+    # Fonction qui teste si l'input est bien un entier.
+    #
+    # Retourne l'entier si il est valide. 
+    #
+    while(1){
+        chomp(my $entier = <>);
+        if ($entier=~ /(\d+)/){
+            return $1;
+        }
+        else{
+            print "Mauvaise valeur !\n";
+        }
+    }
+}
+# =========================FIN GESTION D'ERREUR========================
 
 
 # ===================INTERROGATION===================
-#Fonction qui permet d'afficher les resultats d'une requette SQL.
 sub Affiche_interr{
+    #
+    # Fonction qui permet d'afficher les resultats d'une requette SQL.
+    # 
+    # Affiche le résultat de la requête dans le terminal si elle est valide.  
+    #      
+    print "coucou";
     my $prep = $dbh->prepare(@_);
     $prep->execute;
     while (my $row = $prep->fetchrow_hashref) {
@@ -201,14 +237,16 @@ sub Affiche_interr{
 }
 
 sub interrogation {
+    # 
+    # Boucle qui permet de se déplacer dans le menu "interrogation"
+    #     
     my $rep = <>;
-
     if ($rep == 1){
         rafraichir_ecran();
         print "Les gérants se nomment : \n";
         Affiche_interr("SELECT gerant,hotel  FROM tablehotel");
     }
-    if ($rep == 2){
+    elsif ($rep == 2){
         rafraichir_ecran();
         print "Le nombre de gérants est de : \n";
         Affiche_interr("SELECT COUNT(DISTINCT gerant)  FROM tablehotel");
@@ -217,7 +255,7 @@ sub interrogation {
         if($save eq "o"){
             save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants");
         }
-    } if ($rep == 3){
+    } elsif ($rep == 3){
         rafraichir_ecran();
         print "Les gérants qui gérent au moins deux hotels sont : \n";
         Affiche_interr("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2");
@@ -226,7 +264,7 @@ sub interrogation {
         if($save eq "o"){
             save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gèrent au moins deux Hôtels");
         }
-    }if ($rep == 4){
+    }elsif ($rep == 4){
         rafraichir_ecran();
         print"Entrez une date de debut de reservation (JJ/MM/AAAA)\n";
         chomp(my $dated=gestion_erreur_date());#Demande la date a l'utilisateur
@@ -240,9 +278,12 @@ sub interrogation {
 
 
 # ===================MISE A JOUR===================
-#Fonction qui permet d'ajouter une chambre a la table.
-sub ajouter_chambre{
 
+
+sub ajouter_chambre{
+    #
+    #Fonction qui permet d'ajouter une chambre a la table.
+    #
     print "Pour quel hotel voulez vous ajouter une chambre ? \n";
     my $requete = "SELECT hotel FROM Chambre GROUP BY hotel";
     my $prep = $dbh->prepare($requete);
@@ -269,20 +310,20 @@ sub ajouter_chambre{
     $insert_chambre->execute($rep_numChambre,$rep_hotel,$rep_couchage,$rep_basseSaison,$rep_hauteSaison);#Insertion dans la table de la nouvelle chambre
 
 }
-#Fonction qui permet de modifier le gérant.
 sub modifier_gerant{
-  print "Quel gerant voulez vous modifier ?\n";
-  Affiche_interr("SELECT gerant,hotel  FROM tablehotel\n");
-  chomp(my $oldgerant=<>);
-  print "Quel est le nouveau nom du gérant ?\n";
-  chomp(my $newgerant=<>);
-  my $requete = "UPDATE tablehotel SET gerant='$newgerant' WHERE gerant='$oldgerant'";
-  my $prep = $dbh->prepare($requete);
-  $prep->execute;
+    #Fonction qui permet de modifier le gérant.
+    print "Quel gerant voulez vous modifier ?\n";
+    Affiche_interr("SELECT gerant,hotel  FROM tablehotel\n");
+    chomp(my $oldgerant=<>);
+    print "Quel est le nouveau nom du gérant ?\n";
+    chomp(my $newgerant=<>);
+    my $requete = "UPDATE tablehotel SET gerant='$newgerant' WHERE gerant='$oldgerant'";
+    my $prep = $dbh->prepare($requete);
+    $prep->execute;
 
 }
-#Fonction qui permet d'annuler une reservation.
 sub annuler_resa{
+    #Fonction qui permet d'annuler une reservation.
     print"Quel est votre nom ?\n";
     chomp(my $nom=<>);
 
@@ -295,8 +336,8 @@ sub annuler_resa{
         $prep->execute;
 
 }
-#Fonction qui permet de rajouter un reservation.
 sub ajouter_resa{
+    #Fonction qui permet de rajouter un reservation.
     my $requete = "SELECT hotel FROM reservation GROUP BY hotel";
     my $prep = $dbh->prepare($requete);
     $prep->execute;
@@ -384,9 +425,8 @@ sub hotel_taux {
     }
     return $taux;
 }
-#Taux pour tout les hotels
 sub tout_hotel_taux {
-
+    #Taux pour tout les hotels
     my($today,$weekEarly,$option) = @_;
     my $max = -1;
     my $hotel;
@@ -418,7 +458,8 @@ sub tout_hotel_taux {
     }
 }
 
-sub statTable { # creation d'une table avec chaque taux de chaque hotel
+sub statTable { 
+    # creation d'une table avec chaque taux de chaque hotel
     my(%dataStat) = @_;
     $dbh -> do ("drop table if exists tauxHotel");
     my $table = $dbh->prepare("
@@ -436,7 +477,8 @@ sub statTable { # creation d'une table avec chaque taux de chaque hotel
 # ===================MENU===================
 
 sub menu {
-    print "=========================MENU========================= \n";
+    print "\n";
+    print "\t =========================MENU========================= \n";
     print "\t [1] Interrogation \n";
     print "\t [2] Mise à jour \n";
     print "\t [3] Statistiques \n";
@@ -447,7 +489,8 @@ sub menu {
 # ===================INTERROGATION===================
 sub menu_interrogation {
     rafraichir_ecran();
-    print "=========================INTERROGATION========================= \n";
+    print "\n";
+    print "\t =========================INTERROGATION========================= \n";
     print "\t [1] Afficher les nom des gérants \n";
     print "\t [2] Afficher le nombre des gérants \n";
     print "\t [3] Afficher les personnes qui gèrent au moins deux hôtels \n";
@@ -459,7 +502,8 @@ sub menu_interrogation {
 
 sub menu_maj{
     rafraichir_ecran();
-    print "=========================MISE A JOUR========================= \n";
+    print "\n";
+    print "\t =========================MISE A JOUR========================= \n";
     print "\t [1] Ajouter une chambre à un hôtel\n";
     print "\t [2] Modifier le nom du gérant d'un hôtel\n";
     print "\t [3] Annuler une réservation\n";
@@ -471,13 +515,13 @@ sub maj{
     if ($rep == 1){
         ajouter_chambre();
     }
-    if ($rep == 2){
+    elsif ($rep == 2){
       modifier_gerant();
     }
-    if ($rep == 3){
+    elsif ($rep == 3){
         annuler_resa();
     }
-    if ($rep == 4){
+    elsif ($rep == 4){
         ajouter_resa();
     }
 }
@@ -486,7 +530,8 @@ sub maj{
 
 sub menu_stats{
     rafraichir_ecran();
-    print "=========================STATISTIQUES========================= \n";
+    print "\n";
+    print "\t =========================STATISTIQUES========================= \n";
     print "\t [1] Afficher le taux d'occupation d'un hôtel (7 derniers jours)\n";
     print "\t [2] Afficher le taux d'occupation de tous les hôtels (7 derniers jours)\n";
     print "\t [3] Afficher les ou les hôtels qui ont le plus grand taux d'occupation (7 derniers jours)\n";
@@ -513,32 +558,38 @@ sub stats{
 # ===================MAIN===================
 
 sub rafraichir_ecran{
+    # Fonction pour rafraichir l'ecran.
     print "\033[2J";
     print "\033[0;0H";
 }
 
 rafraichir_ecran();
 
-while (1){
+while(1){
     menu;#Affiche le menu.
-    my $rep = <>;
+    my $rep = test_entier();
+    # my $rep = <>;    
     if ($rep == 1){
         menu_interrogation();
         interrogation();
     }
-    if ($rep == 2){
+    elsif ($rep == 2){
         menu_maj();
         maj();
     }
-    if ($rep == 3){
+    elsif ($rep == 3){
         menu_stats();
         stats();
     }
-    if ($rep == 4){
+    elsif ($rep == 4){
         initialisation();#lance l'initialisation de la table.
     }
-    if ($rep == 0){
+    elsif ($rep == 0){
         $dbh -> disconnect();
         exit;
+    }
+    else{
+        rafraichir_ecran();
+        print "Mauvaise valeur ! \n";
     }
 }
