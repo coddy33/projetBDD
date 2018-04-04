@@ -165,10 +165,10 @@ sub gestion_erreur_date{
             if ($1 <= 31 && $2 <= 12 && $3>1990){
                 return $date;
             }else{
-                print"Date incorrect, recommmencez ! \n";
+                print"Valeur trop grande, recommmencez ! \n";
             }
         }else{
-            print"Mauvaise valeur ! (JJ/MM/AAAA)\n";
+            print"Mauvais valeur ! (JJ/MM/AAAA)\n";
         }
     }
 }
@@ -301,9 +301,9 @@ sub ajouter_resa{
     my $hotel = $Thotel[$rep_numhotel];
     chomp($hotel);
     print "Quelle est votre date d'arrivée ?\n";
-    chomp(my$debut = gestion_erreur_date());
+    chomp(my$debut = <>);
     print "Quelle est votre date de départ ?  \n";
-    chomp(my$fin = gestion_erreur_date());
+    chomp(my$fin = <>);
 
     $requete = "SELECT numchambre FROM reservation WHERE (hotel='$hotel' AND (debutresa >TO_DATE('$debut','DD/MM/YYYY')  AND debutresa>TO_DATE('$fin','DD/MM/YYYY') )
     OR(finresa<TO_DATE('$debut','DD/MM/YYYY') AND finresa<TO_DATE('$fin','DD/MM/YYYY') )) GROUP BY numchambre";
@@ -339,14 +339,15 @@ sub ajouter_resa{
 # ==================STATISTIQUES=============
 
 sub dateConvert {
-    my($date) = @_;
-    my @convDate = split("/",$date);
-    my $today = DateTime->new ( day => $convDate[0],
-                                month =>$convDate[1],
-                                year =>$convDate[2]
-                                );
-    my $weekEarly = $today->clone->subtract( weeks => 1);
-    return ($today,$weekEarly);
+
+my($date) = @_;
+my @convDate = split("/",$date);
+my $today = DateTime->new ( day => $convDate[0],
+                            month =>$convDate[1],
+                            year =>$convDate[2]
+                            );
+my $weekEarly = $today->clone->subtract( weeks => 1);
+return ($today,$weekEarly);
 }
 
 sub hotel_taux {
