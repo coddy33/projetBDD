@@ -1,4 +1,4 @@
-# 
+#
 # Projet Bases de données et Perl \\ Gestion d'une chaîne d'hôtels
 #
 # BODET Martial}
@@ -152,7 +152,7 @@ sub save_html{
         <body>
 
         <div class='container'>
-        <h2>Résutats</h2>           
+        <h2>Résutats</h2>
         <table class='table table-striped'>
         <thead>
             <tr>
@@ -202,7 +202,7 @@ sub test_entier{
     #
     # Fonction qui teste si l'input est bien un entier.
     #
-    # Retourne l'entier si il est valide. 
+    # Retourne l'entier si il est valide.
     #
     while(1){
         chomp(my $entier = <>);
@@ -221,10 +221,9 @@ sub test_entier{
 sub Affiche_interr{
     #
     # Fonction qui permet d'afficher les resultats d'une requette SQL.
-    # 
-    # Affiche le résultat de la requête dans le terminal si elle est valide.  
-    #      
-    print "coucou";
+    #
+    # Affiche le résultat de la requête dans le terminal si elle est valide.
+    #
     my $prep = $dbh->prepare(@_);
     $prep->execute;
     while (my $row = $prep->fetchrow_hashref) {
@@ -237,10 +236,10 @@ sub Affiche_interr{
 }
 
 sub interrogation {
-    # 
+    #
     # Boucle qui permet de se déplacer dans le menu "interrogation"
-    #     
-    my $rep = <>;
+    #
+    my $rep = test_entier();
     if ($rep == 1){
         rafraichir_ecran();
         print "Les gérants se nomment : \n";
@@ -295,23 +294,25 @@ sub ajouter_chambre{
     for (my $i=0 ; $i < $#Thotel ; $i++ ){
         print "[$i] $Thotel[$i] \n";
     }
-    my $rep_numhotel = <>;
+    my $rep_numhotel = test_entier();
     my $rep_hotel = $Thotel[$rep_numhotel];
     print "Quel est le numéro de la chambre ?\n";
-    my $rep_numChambre = <>;
+    my $rep_numChambre = test_entier();
     print "Quel est le type de couchage ? (Simple/Double) \n";
     my $rep_couchage = <>;
     print "Quel est le prix basse saison ?  \n";
-    my $rep_basseSaison = <>;
+    my $rep_basseSaison = test_entier();
     print "Quel est le haute basse saison ?  \n";
-    my $rep_hauteSaison = <>;
+    my $rep_hauteSaison = test_entier();
 
     my $insert_chambre = $dbh->prepare("INSERT INTO Chambre VALUES(?,?,?,?,?)");
     $insert_chambre->execute($rep_numChambre,$rep_hotel,$rep_couchage,$rep_basseSaison,$rep_hauteSaison);#Insertion dans la table de la nouvelle chambre
 
 }
 sub modifier_gerant{
+    #
     #Fonction qui permet de modifier le gérant.
+    #
     print "Quel gerant voulez vous modifier ?\n";
     Affiche_interr("SELECT gerant,hotel  FROM tablehotel\n");
     chomp(my $oldgerant=<>);
@@ -329,7 +330,7 @@ sub annuler_resa{
 
     Affiche_interr("SELECT numresa,debutresa,finresa FROM reservation WHERE nomclient='$nom' AND numresa>0" );#WHERE nomclient='$nom'");
     print"Quel est votre numero de reservation ?\n";
-    chomp(my $numresa=<>);
+    chomp(my $numresa=test_entier());
 
         my $requete="DELETE FROM reservation WHERE debutresa > CURRENT_DATE+2 AND numresa = '$numresa'";
         my $prep=$dbh->prepare($requete);
@@ -349,7 +350,7 @@ sub ajouter_resa{
     for (my $i=0 ; $i < $#Thotel ; $i++ ){
         print "[$i] $Thotel[$i] \n";
     }
-    my $rep_numhotel = <>;
+    my $rep_numhotel =test_entier();
     my $hotel = $Thotel[$rep_numhotel];
     chomp($hotel);
     print "Quelle est votre date d'arrivée ?\n";
@@ -366,7 +367,7 @@ sub ajouter_resa{
          print "chambre : $chambre \n";
          }
     print "Quel est le numéro de la chambre choisie:\n";
-    my $numchambre = <>;
+    my $numchambre = test_entier();
 
     print "Quel est votre nom ?  \n";
     my $nom = <>;
@@ -458,7 +459,7 @@ sub tout_hotel_taux {
     }
 }
 
-sub statTable { 
+sub statTable {
     # creation d'une table avec chaque taux de chaque hotel
     my(%dataStat) = @_;
     $dbh -> do ("drop table if exists tauxHotel");
@@ -511,7 +512,7 @@ sub menu_maj{
 }
 
 sub maj{
-    my $rep = <>;
+    my $rep = test_entier();
     if ($rep == 1){
         ajouter_chambre();
     }
@@ -538,7 +539,7 @@ sub menu_stats{
 }
 
 sub stats{
-    my $option = <>;
+    my $option = test_entier();
     print "Quelle date date de référence ? (JJ/02/2018)\n";
     chomp(my $date = gestion_erreur_date());
     my($today,$weekEarly) = dateConvert($date);
@@ -568,7 +569,7 @@ rafraichir_ecran();
 while(1){
     menu;#Affiche le menu.
     my $rep = test_entier();
-    # my $rep = <>;    
+    # my $rep = <>;
     if ($rep == 1){
         menu_interrogation();
         interrogation();
