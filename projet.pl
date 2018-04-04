@@ -126,21 +126,32 @@ sub save_html{
     #   -$nom_table : deuxieme argument, donner le nom de la table
     #
     my($requete,$nom_table) = @_;
-    print "Quel nom voulez-vous donner à votre fichier ?\n";
+    print "Quel nom voulez-vous donner à votre fichier ? \n";
     my $nom_fichier = <>;
     my $table = "tableHotel";
     open (FICHIER, "> $nom_fichier ") || die ("Vous ne pouvez pas créer le fichier \"fichier.txt\"");
-    print FICHIER "<!DOCTYPE html> \n
-    <html><head>
-    <meta http-equiv='content-type' content='text/html; charset=windows-1252'>
-    <meta charset='UTF-8'>
-    <title>$nom_table</title>
-    </head>
-    <body>
-    <table border='1'>
-    <caption> $nom_table    </caption>
-    <tbody><tr> ";
+    print FICHIER qq(<!DOCTYPE html> \n
+        <html lang='en'>
+        <head>
+        <title>Résultat de requête</title>
+        <meta charset='utf-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+        <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
+        <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
+        <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js'></script>
+        </head>
+        <body>
 
+        <div class='container'>
+        <h2>Résutats</h2>           
+        <table class='table table-striped'>
+        <thead>
+            <tr>
+                <th>Hôtel</th>
+                <th>$nom_table</th>
+            </tr>
+            </thead>
+            <tbody>);
     my $prep = $dbh->prepare($requete);
     $prep->execute;
     while (my $row = $prep->fetchrow_hashref) {
@@ -204,7 +215,7 @@ sub interrogation {
         print "Voulez-vous sauvegarder ? (o/n)\n";
         chomp(my $save=<>);
         if($save eq "o"){
-            save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants :");
+            save_html("SELECT COUNT(DISTINCT gerant)  FROM tablehotel", "Nombre de gerants");
         }
     } if ($rep == 3){
         rafraichir_ecran();
@@ -213,7 +224,7 @@ sub interrogation {
         print "Voulez-vous sauvegarder ?(o/n)\n";
         chomp(my $save=<>);
         if($save eq "o"){
-            save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gèrent au moins deux Hôtels :");
+            save_html("SELECT gerant  FROM tablehotel GROUP BY gerant HAVING COUNT(*) >=2", "Les personnes qui gèrent au moins deux Hôtels");
         }
     }if ($rep == 4){
         rafraichir_ecran();
@@ -400,7 +411,7 @@ sub tout_hotel_taux {
         print "Voulez-vous sauvegarder ? (o/n)\n";
         chomp(my $rep=<>);
         if($rep eq "o"){
-            save_html("SELECT * FROM tauxHotel", "Taux d'occupations :");
+            save_html("SELECT * FROM tauxHotel", "Taux d'occupations");
         }
     }elsif($option == 3){
         print "Meilleure taux d'occupation : $hotel -> $max% \n";
