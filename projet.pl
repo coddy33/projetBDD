@@ -14,7 +14,7 @@ use DBI;
 use DateTime;
 
 my $file = "Hotels1.csv";#Chargement du CSV, qui permet l'initialisation de la table si elle n'existe pas.
-my $dbh = DBI -> connect("DBI:Pg:dbname=mbodet911e;host=dbserver","mbodet911e","idiot21",{'RaiseError' => 1});#Connection a la base
+my $dbh = DBI -> connect("DBI:Pg:dbname=fjung;host=dbserver","fjung","idiot21",{'RaiseError' => 1});#Connection a la base
 $dbh-> do( "SET datestyle = ISO, DMY" );#Permet de definir le type d'heure (dd/mm/aaaa)
 
 sub initialisation{
@@ -184,9 +184,9 @@ sub gestion_erreur_date{
     # Retourne la date au bon format si elle est valide.
     #
     while(1){
-        chomp(my$date = <>);
-        if ($date=~ /(\d{2})\/(\d{2})\/(\d{4})/){
-            if ($1 <= 31 && $2 <= 12 && $3>1990){
+        chomp(my $date = <>);
+        if ($date=~ /^(\d{2})\/(\d{2})\/(\d{4})/){
+            if ($1 <= 31 && $2 <= 12 && $3>1990 && $3 < 2020){
                 return $date;
             }else{
                 print"Date incorrect, recommmencez ! \n";
@@ -225,13 +225,18 @@ sub Affiche_interr{
     #
     my $prep = $dbh->prepare(@_);
     $prep->execute;
-    while (my $row = $prep->fetchrow_hashref) {
-        my @fig = sort(keys(%$row));
+    if ($prep-> rows == 0) {
+        print "Requête invalide\n";
+        return 0;
+    }
+    while (my $line = $prep->fetchrow_hashref) {
+        my @fig = sort(keys(%$line));
         foreach my $fname (@fig) {
-        print "$row->{$fname} ";
+        print "$line->{$fname} ";
         }
     print "\n";
     }
+    return 1;
 }
 
 sub interrogation {
@@ -315,11 +320,16 @@ sub modifier_gerant{
     print "Quel gerant voulez vous modifier ?\n";
     Affiche_interr("SELECT gerant,hotel  FROM tablehotel\n");
     chomp(my $oldgerant=<>);
-    print "Quel est le nouveau nom du gérant ?\n";
-    chomp(my $newgerant=<>);
-    my $requete = "UPDATE tablehotel SET gerant='$newgerant' WHERE gerant='$oldgerant'";
-    my $prep = $dbh->prepare($requete);
-    $prep->execute;
+    my $verif = Affiche_interr("SELECT gerant,hotel  FROM tablehotel WHERE gerant = '$oldgerant'\n");
+    if($verif == 0) {
+        return;
+    }else{
+        print "Quel est le nouveau nom du gérant ?\n";
+        chomp(my $newgerant=<>);
+        my $requete = "UPDATE tablehotel SET gerant='$newgerant' WHERE gerant='$oldgerant'";
+        my $prep = $dbh->prepare($requete);
+        $prep->execute;
+    }
 
 }
 sub annuler_resa{
@@ -329,13 +339,16 @@ sub annuler_resa{
     print"Quel est votre nom ?\n";
     chomp(my $nom=<>);
 
-    Affiche_interr("SELECT numresa,debutresa,finresa FROM reservation WHERE nomclient='$nom' AND numresa>0" );#WHERE nomclient='$nom'");
-    print"Quel est votre numero de reservation ?\n";
-    chomp(my $numresa=test_entier());
+    my $verif = Affiche_interr("SELECT numresa,debutresa,finresa FROM reservation WHERE nomclient='$nom' AND numresa>0" );#WHERE nomclient='$nom'");
+    if ($verif == 0){
+        return;
+    }else {
+        print"Quel est votre numero de reservation ?\n";
+        chomp(my $numresa=test_entier());
 
-        my $requete="DELETE FROM reservation WHERE debutresa > CURRENT_DATE+2 AND numresa = '$numresa'";
-        my $prep=$dbh->prepare($requete);
-        $prep->execute;
+            my $requete="DELETE FROM reservation WHERE numresa = '$numresa' AND nomclient = '$nom'";
+            Affiche_interr($requete);
+    }
 }
 
 sub ajouter_resa{
@@ -357,37 +370,41 @@ sub ajouter_resa{
     my $hotel = $Thotel[$rep_numhotel];
     chomp($hotel);
     print "Quelle est votre date d'arrivée ?\n";
-    chomp(my$debut = gestion_erreur_date());
+    chomp(my $debut = gestion_erreur_date());
     print "Quelle est votre date de départ ?  \n";
-    chomp(my$fin = gestion_erreur_date());
+    chomp(my $fin = gestion_erreur_date());
 
     $requete = "SELECT numchambre FROM reservation WHERE (hotel='$hotel' AND (debutresa >TO_DATE('$debut','DD/MM/YYYY')  AND debutresa>TO_DATE('$fin','DD/MM/YYYY') )
     OR(finresa<TO_DATE('$debut','DD/MM/YYYY') AND finresa<TO_DATE('$fin','DD/MM/YYYY') )) GROUP BY numchambre";
-    $prep = $dbh->prepare($requete);
-    $prep->execute;
-    print "La liste des chambres vides pour cet hotel est : \n";
-        while (my($chambre) = $prep->fetchrow_array ){
-         print "chambre : $chambre \n";
-         }
-    print "Quel est le numéro de la chambre choisie:\n";
-    my $numchambre = test_entier();
+    my $verif = Affiche_interr($requete);
+    if($verif == 0) {
+        return;
+    }else{
+        $prep = $dbh->prepare($requete);
+        $prep->execute;
+        print "La liste des chambres vides pour cet hotel est : \n";
+            while (my($chambre) = $prep->fetchrow_array ){
+            print "chambre : $chambre \n";
+            }
+        print "Quel est le numéro de la chambre choisie:\n";
+        my $numchambre = test_entier();
 
-    print "Quel est votre nom ?  \n";
-    my $nom = <>;
+        print "Quel est votre nom ?  \n";
+        my $nom = <>;
 
-    print "Quel est votre numero ?  \n";
-    my $numero = <>;
+        print "Quel est votre numero ?  \n";
+        my $numero = <>;
 
-    $requete="SELECT MAX(numresa) FROM reservation";
-    $prep= $dbh->prepare($requete);
-    $prep->execute;
-    my $numresa = $prep->fetchrow_array();
-    $numresa=$numresa+1;
-    my $insert_resa = $dbh->prepare("INSERT INTO reservation VALUES(?,?,?,?,?,?)");
-    $insert_resa->execute($numresa,$debut,$fin,$numchambre,$hotel,$nom);#Insertion dans la table de la nouvelle chambre
-    my $insert_client = $dbh->prepare("INSERT INTO client VALUES(?,?)");
-    $insert_client->execute($nom,$numero);#Insertion dans la table de la nouvelle chambre
-
+        $requete="SELECT MAX(numresa) FROM reservation";
+        $prep= $dbh->prepare($requete);
+        $prep->execute;
+        my $numresa = $prep->fetchrow_array();
+        $numresa=$numresa+1;
+        my $insert_resa = $dbh->prepare("INSERT INTO reservation VALUES(?,?,?,?,?,?)");
+        $insert_resa->execute($numresa,$debut,$fin,$numchambre,$hotel,$nom);#Insertion dans la table de la nouvelle chambre
+        my $insert_client = $dbh->prepare("INSERT INTO client VALUES(?,?)");
+        $insert_client->execute($nom,$numero);#Insertion dans la table de la nouvelle chambre
+    }
 }
 # ===========================================
 
@@ -554,7 +571,6 @@ sub stats{
     print "Quelle date date de référence ? (JJ/02/2018)\n";
     chomp(my $date = gestion_erreur_date());
     my($today,$weekEarly) = dateConvert($date);
-
         my $taux;
         my $h;
         if ($option == 1) {
@@ -575,8 +591,10 @@ sub rafraichir_ecran{
     print "\033[0;0H";
 }
 
+rafraichir_ecran();
+
 while(1){
-    rafraichir_ecran();
+
     menu;#Affiche le menu.
     my $rep = test_entier();
     # my $rep = <>;
